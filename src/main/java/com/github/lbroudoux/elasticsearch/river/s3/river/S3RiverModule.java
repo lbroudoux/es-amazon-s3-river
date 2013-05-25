@@ -16,33 +16,18 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-package com.github.lbroudoux.elasticsearch.river.s3.plugin;
+package com.github.lbroudoux.elasticsearch.river.s3.river;
 
-import org.elasticsearch.common.inject.Module;
-import org.elasticsearch.plugins.AbstractPlugin;
-import org.elasticsearch.river.RiversModule;
-
-import com.github.lbroudoux.elasticsearch.river.s3.river.S3RiverModule;
+import org.elasticsearch.common.inject.AbstractModule;
+import org.elasticsearch.river.River;
 /**
  * 
  * @author laurent
  */
-public class S3RiverPlugin extends AbstractPlugin{
+public class S3RiverModule extends AbstractModule{
 
    @Override
-   public String name(){
-      return "river-amazon-s3";
-   }
-
-   @Override
-   public String description(){
-      return "River Amazon S3 Plugin";
-   }
-
-   @Override
-   public void processModule(Module module){
-      if (module instanceof RiversModule){
-         ((RiversModule) module).registerRiver("amazon-s3", S3RiverModule.class);
-      }
+   protected void configure(){
+      bind(River.class).to(S3River.class).asEagerSingleton();
    }
 }
