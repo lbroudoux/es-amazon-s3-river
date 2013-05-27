@@ -18,11 +18,44 @@
  */
 package com.github.lbroudoux.elasticsearch.river.s3.river;
 
+import java.util.List;
+import java.util.Map;
+
+import org.elasticsearch.common.Strings;
+import org.elasticsearch.common.xcontent.support.XContentMapValues;
 /**
  * 
  * @author laurent
  */
-public class S3RiverUtil {
+public class S3RiverUtil{
 
    public static final String INDEX_TYPE_DOC = "doc";
+   
+   /**
+    * Extract array from settings (array or ; delimited String)
+    * @param settings Settings
+    * @param path Path to settings definition
+    * @return Array of settings
+    */
+   @SuppressWarnings("unchecked")
+   public static String[] buildArrayFromSettings(Map<String, Object> settings, String path){
+      String[] includes;
+
+      // We manage comma separated format and arrays
+      if (XContentMapValues.isArray(XContentMapValues.extractValue(path, settings))) {
+         List<String> includesarray = (List<String>) XContentMapValues.extractValue(path, settings);
+         int i = 0;
+         includes = new String[includesarray.size()];
+         for (String include : includesarray) {
+            includes[i++] = Strings.trimAllWhitespace(include);
+         }
+      } else {
+         String includedef = (String) XContentMapValues.extractValue(path, settings);
+         includes = Strings.commaDelimitedListToStringArray(Strings.trimAllWhitespace(includedef));
+      }
+      
+      String[] uniquelist = Strings.removeDuplicateStrings(includes);
+      
+      return uniquelist;
+   }
 }

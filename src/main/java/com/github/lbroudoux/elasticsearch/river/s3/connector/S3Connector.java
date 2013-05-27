@@ -18,7 +18,7 @@
  */
 package com.github.lbroudoux.elasticsearch.river.s3.connector;
 
-import java.util.Date;
+import java.util.ArrayList;
 import java.util.List;
 
 import org.elasticsearch.common.logging.ESLogger;
@@ -52,6 +52,7 @@ public class S3Connector{
    /**
     * 
     * @param bucketName
+    * @param pathPrefix
     */
    public void connectUserBucket(String bucketName, String pathPrefix){
       this.bucketName = bucketName;
@@ -61,12 +62,33 @@ public class S3Connector{
       String location = s3Client.getBucketLocation(bucketName);
    }
    
-   public void getChanges(Long lastScanTime){
-      ObjectListing listing = s3Client.listObjects(bucketName, pathPrefix);
-      List<S3ObjectSummary> summaries = listing.getObjectSummaries();
-      for (S3ObjectSummary summary : summaries){
-         Date lastModification = summary.getLastModified();
-         
+   /**
+    * 
+    * @param lastScanTime
+    * @return
+    */
+   public S3Changes getChanges(Long lastScanTime){
+      if (logger.isDebugEnabled()){
+         logger.debug("Getting buckets changes since {}", lastScanTime);
       }
+      List<S3ObjectSummary> result = new ArrayList<S3ObjectSummary>();
+      
+      if (lastScanTime == null){
+         lastScanTime = System.currentTimeMillis();
+      }
+      
+      ObjectListing listing = s3Client.listObjects(bucketName, pathPrefix);
+      while (listing.isTruncated()){
+         List<S3ObjectSummary> summaries = listing.getObjectSummaries();
+         for (S3ObjectSummary summary : summaries){
+            if (summary.getLastModified().getTime() > lastScanTime){
+               result.add(summary);
+            }
+         }
+         listing = s3Client.listNextBatchOfObjects(listing);
+      }
+      
+      // Wrap results and latest scan time.
+      return new S3Changes(lastScanTime, result);
    }
 }
