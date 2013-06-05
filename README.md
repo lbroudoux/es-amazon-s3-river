@@ -10,7 +10,7 @@ This river plugin helps to index documents from a Amazon S3 account buckets.
 Versions
 --------
 
-table>
+<table>
    <thead>
       <tr>
          <td>Amazon S3 River Plugin</td>
