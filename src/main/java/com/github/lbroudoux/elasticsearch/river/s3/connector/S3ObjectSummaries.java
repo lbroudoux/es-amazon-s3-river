@@ -26,26 +26,26 @@ import com.amazonaws.services.s3.model.S3ObjectSummary;
  * 
  * @author laurent
  */
-public class S3Changes implements Serializable{
+public class S3ObjectSummaries implements Serializable{
 
    /** Default serial version UID. */
    private static final long serialVersionUID = 1L;
 
    private Long lastScanTime;
    
-   private List<S3ObjectSummary> changes;
+   private List<S3ObjectSummary> summaries;
 
    
-   public S3Changes(Long lastScanTime, List<S3ObjectSummary> changes){
+   public S3ObjectSummaries(Long lastScanTime, List<S3ObjectSummary> changes){
       this.lastScanTime = lastScanTime;
-      this.changes = changes;
+      this.summaries = changes;
    }
    
    public Long getLastScanTime(){
       return lastScanTime;
    }
 
-   public List<S3ObjectSummary> getChanges() {
-      return changes;
+   public List<S3ObjectSummary> getSummaries(){
+      return summaries;
    }
 }

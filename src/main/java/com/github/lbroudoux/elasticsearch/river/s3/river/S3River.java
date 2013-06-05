@@ -33,6 +33,7 @@ import org.elasticsearch.cluster.ClusterState;
 import org.elasticsearch.cluster.block.ClusterBlockException;
 import org.elasticsearch.cluster.metadata.IndexMetaData;
 import org.elasticsearch.cluster.metadata.MappingMetaData;
+import org.elasticsearch.common.Base64;
 import org.elasticsearch.common.inject.Inject;
 import org.elasticsearch.common.util.concurrent.EsExecutors;
 import org.elasticsearch.common.xcontent.XContentBuilder;
@@ -43,7 +44,8 @@ import org.elasticsearch.river.River;
 import org.elasticsearch.river.RiverName;
 import org.elasticsearch.river.RiverSettings;
 
-import com.github.lbroudoux.elasticsearch.river.s3.connector.S3Changes;
+import com.amazonaws.services.s3.model.S3ObjectSummary;
+import com.github.lbroudoux.elasticsearch.river.s3.connector.S3ObjectSummaries;
 import com.github.lbroudoux.elasticsearch.river.s3.connector.S3Connector;
 /**
  * 
@@ -253,7 +255,7 @@ public class S3River extends AbstractRiverComponent implements River{
                // Scan folder starting from last changes id, then record the new one.
                Long lastScanTime = getLastScanTimeFromRiver("_lastScanTime");
                lastScanTime = scan(lastScanTime);
-               updateRiver("_lastChangesId", lastScanTime);
+               updateRiver("_lastScanTime", lastScanTime);
                
                // If some bulkActions remains, we should commit them
                commitBulk();
@@ -263,6 +265,14 @@ public class S3River extends AbstractRiverComponent implements River{
                   logger.debug("Exception for folder {} is {}", feedDefinition.getBucket(), e);
                   e.printStackTrace();
                }
+            }
+            
+            try {
+               if (logger.isDebugEnabled()){
+                  logger.debug("Amazon S3 river is going to sleep for {} ms", feedDefinition.getUpdateRate());
+               }
+               Thread.sleep(feedDefinition.getUpdateRate());
+            } catch (InterruptedException ie){
             }
          }
       }
@@ -309,9 +319,41 @@ public class S3River extends AbstractRiverComponent implements River{
          if (logger.isDebugEnabled()){
             logger.debug("Starting scanning of bucket {} since {}", feedDefinition.getBucket(), lastScanTime);
          }
-         S3Changes changes = s3.getChanges(lastScanTime);
+         S3ObjectSummaries changes = s3.getObjectSummaries(lastScanTime);
+         
+         // Browse change and checks if its indexable before starting.
+         for (S3ObjectSummary change : changes.getSummaries()){
+            if (S3RiverUtil.isIndexable(change.getKey(), feedDefinition.getIncludes(), feedDefinition.getExcludes())){
+               indexFile(change);
+            }
+         }
          
          return changes.getLastScanTime();
+      }
+      
+      /** Index an Amazon S3 file by retrieving its content and building the suitable Json content. */
+      private void indexFile(S3ObjectSummary summary){
+         if (logger.isDebugEnabled()){
+            logger.debug("Trying to index '{}'", summary.getKey());
+         }
+         
+         try{
+            byte[] fileContent = s3.getContent(summary);
+            if (fileContent != null){
+               esIndex(indexName, typeName, summary.getKey().replace('/', '-'),
+                     jsonBuilder()
+                        .startObject()
+                           .field(S3RiverUtil.DOC_FIELD_TITLE, summary.getKey().substring(summary.getKey().lastIndexOf('/')+1))
+                           .field(S3RiverUtil.DOC_FIELD_MODIFIED_DATE, summary.getLastModified().getTime())
+                           .startObject("file")
+                              .field("_name", summary.getKey().substring(summary.getKey().lastIndexOf('/')+1))
+                              .field("content", Base64.encodeBytes(fileContent))
+                           .endObject()
+                        .endObject());
+            }
+         } catch (Exception e) {
+            logger.warn("Can not index " + summary.getKey() + " : " + e.getMessage());
+         }
       }
       
       /** Update river last changes id value.*/
