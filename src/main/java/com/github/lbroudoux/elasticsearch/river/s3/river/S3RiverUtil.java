@@ -18,10 +18,13 @@
  */
 package com.github.lbroudoux.elasticsearch.river.s3.river;
 
+import static org.elasticsearch.common.xcontent.XContentFactory.jsonBuilder;
+
 import java.util.List;
 import java.util.Map;
 
 import org.elasticsearch.common.Strings;
+import org.elasticsearch.common.xcontent.XContentBuilder;
 import org.elasticsearch.common.xcontent.support.XContentMapValues;
 /**
  * 
@@ -33,6 +36,31 @@ public class S3RiverUtil{
    
    public static final String DOC_FIELD_TITLE = "title";
    public static final String DOC_FIELD_MODIFIED_DATE = "modifiedDate";
+   
+   /**
+    * Build mapping description for Amazon S3 files.
+    * @param type The name of type for S3 files
+    * @return A content builder for mapping informations
+    * @throws Exception it something goes wrong
+    */
+   public static XContentBuilder buildS3FileMapping(String type) throws Exception{
+      XContentBuilder xbMapping = jsonBuilder().prettyPrint().startObject()
+            .startObject(type).startObject("properties")
+            .startObject(DOC_FIELD_TITLE).field("type", "string").field("analyzer","keyword").endObject()
+            .startObject(DOC_FIELD_MODIFIED_DATE).field("type", "date").endObject()
+            .startObject("file")
+            .field("type", "attachment")
+               .startObject("fields")
+                  .startObject("title").field("store", "yes").endObject()
+                  .startObject("file")
+                     .field("term_vector", "with_positions_offsets")
+                     .field("store", "yes")
+                  .endObject()
+               .endObject()
+         .endObject()
+         .endObject().endObject().endObject();
+      return xbMapping;
+   }
    
    /**
     * Extract array from settings (array or ; delimited String)

@@ -18,9 +18,9 @@
  */
 package com.github.lbroudoux.elasticsearch.river.s3.river;
 
-import static org.elasticsearch.common.xcontent.XContentFactory.jsonBuilder;
-
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 import java.util.Map;
 
 import org.elasticsearch.ExceptionsHelper;
@@ -28,6 +28,8 @@ import org.elasticsearch.action.admin.indices.mapping.put.PutMappingResponse;
 import org.elasticsearch.action.bulk.BulkRequestBuilder;
 import org.elasticsearch.action.bulk.BulkResponse;
 import org.elasticsearch.action.get.GetResponse;
+import org.elasticsearch.action.search.SearchResponse;
+import org.elasticsearch.action.search.SearchType;
 import org.elasticsearch.client.Client;
 import org.elasticsearch.cluster.ClusterState;
 import org.elasticsearch.cluster.block.ClusterBlockException;
@@ -43,10 +45,13 @@ import org.elasticsearch.river.AbstractRiverComponent;
 import org.elasticsearch.river.River;
 import org.elasticsearch.river.RiverName;
 import org.elasticsearch.river.RiverSettings;
+import org.elasticsearch.search.SearchHit;
 
 import com.amazonaws.services.s3.model.S3ObjectSummary;
 import com.github.lbroudoux.elasticsearch.river.s3.connector.S3ObjectSummaries;
 import com.github.lbroudoux.elasticsearch.river.s3.connector.S3Connector;
+
+import static org.elasticsearch.common.xcontent.XContentFactory.jsonBuilder;
 /**
  * 
  * @author laurent
@@ -144,6 +149,15 @@ public class S3River extends AbstractRiverComponent implements River{
          }
       }
       
+      try{
+         // If needed, we create the new mapping for files
+         pushMapping(indexName, typeName, S3RiverUtil.buildS3FileMapping(typeName));
+      } catch (Exception e) {
+         logger.warn("Failed to create mapping for [{}/{}], disabling river...",
+               e, indexName, typeName);
+         return;
+      }
+               
       // We create as many Threads as there are feeds.
       feedThread = EsExecutors.daemonThreadFactory(settings.globalSettings(), "fs_slurper")
             .newThread(new S3Scanner(feedDefinition));
@@ -319,20 +333,55 @@ public class S3River extends AbstractRiverComponent implements River{
          if (logger.isDebugEnabled()){
             logger.debug("Starting scanning of bucket {} since {}", feedDefinition.getBucket(), lastScanTime);
          }
-         S3ObjectSummaries changes = s3.getObjectSummaries(lastScanTime);
+         S3ObjectSummaries summaries = s3.getObjectSummaries(lastScanTime);
+         
+         // Store now already indexed ids.
+         List<String> previousFileIds = getAlreadyIndexFileIds();
          
          // Browse change and checks if its indexable before starting.
-         for (S3ObjectSummary change : changes.getSummaries()){
-            if (S3RiverUtil.isIndexable(change.getKey(), feedDefinition.getIncludes(), feedDefinition.getExcludes())){
-               indexFile(change);
+         List<String> scannedFileIds = new ArrayList<String>();
+         for (S3ObjectSummary summary : summaries.getSummaries()){
+            if (S3RiverUtil.isIndexable(summary.getKey(), feedDefinition.getIncludes(), feedDefinition.getExcludes())){
+               String fileId = indexFile(summary);
+               if (fileId != null){
+                  scannedFileIds.add(fileId);
+               }
             }
          }
          
-         return changes.getLastScanTime();
+         // Now, because we do not get changes but only present files, we should 
+         // compare previously indexed files with latest to extract deleted ones...
+         for (String previousFileId : previousFileIds){
+            if (!scannedFileIds.contains(previousFileId)){
+               esDelete(indexName, typeName, previousFileId);
+            }
+         }
+         
+         return summaries.getLastScanTime();
+      }
+      
+      /** Retrieve the ids of files already present into index. */
+      private List<String> getAlreadyIndexFileIds(){
+         List<String> fileIds = new ArrayList<String>();
+         // TODO : Should be later optimized for only retrieving ids and getting
+         // over the 5000 hits limitation.
+         SearchResponse response = client
+               .prepareSearch(indexName)
+               .setSearchType(SearchType.QUERY_AND_FETCH)
+               .setTypes(typeName)
+               .setFrom(0)
+               .setSize(5000)
+               .execute().actionGet();
+         if (response.getHits() != null && response.getHits().getHits() != null){
+            for (SearchHit hit : response.getHits().getHits()){
+               fileIds.add(hit.getId());
+            }
+         }
+         return fileIds;
       }
       
       /** Index an Amazon S3 file by retrieving its content and building the suitable Json content. */
-      private void indexFile(S3ObjectSummary summary){
+      private String indexFile(S3ObjectSummary summary){
          if (logger.isDebugEnabled()){
             logger.debug("Trying to index '{}'", summary.getKey());
          }
@@ -340,7 +389,9 @@ public class S3River extends AbstractRiverComponent implements River{
          try{
             byte[] fileContent = s3.getContent(summary);
             if (fileContent != null){
-               esIndex(indexName, typeName, summary.getKey().replace('/', '-'),
+               // Build a unique id from S3 unique summary key. 
+               String fileId = summary.getKey().replace('/', '-');
+               esIndex(indexName, typeName, fileId,
                      jsonBuilder()
                         .startObject()
                            .field(S3RiverUtil.DOC_FIELD_TITLE, summary.getKey().substring(summary.getKey().lastIndexOf('/')+1))
@@ -350,10 +401,12 @@ public class S3River extends AbstractRiverComponent implements River{
                               .field("content", Base64.encodeBytes(fileContent))
                            .endObject()
                         .endObject());
+               return fileId;
             }
          } catch (Exception e) {
             logger.warn("Can not index " + summary.getKey() + " : " + e.getMessage());
          }
+         return null;
       }
       
       /** Update river last changes id value.*/
