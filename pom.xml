@@ -2,7 +2,7 @@
   <modelVersion>4.0.0</modelVersion>
   <groupId>com.github.lbroudoux.elasticsearch</groupId>
   <artifactId>amazon-s3-river</artifactId>
-  <version>0.0.1</version>
+  <version>0.0.2-SNAPSHOT</version>
   <packaging>jar</packaging>
   
   <parent>
@@ -31,7 +31,7 @@
     <url>scm:git@github.com:lbroudoux/es-amazon-s3-river.git</url>
     <connection>scm:git:git@github.com:lbroudoux/es-amazon-s3-river.git</connection>
     <developerConnection>scm:git:git@github.com:lbroudoux/es-amazon-s3-river.git</developerConnection>
-    <tag>amazon-s3-river-0.0.1</tag>
+    <tag>HEAD</tag>
   </scm>
   <issueManagement>
     <system>GitHub</system>
