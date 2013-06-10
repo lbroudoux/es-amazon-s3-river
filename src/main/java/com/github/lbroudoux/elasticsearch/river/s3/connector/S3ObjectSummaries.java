@@ -23,7 +23,9 @@ import java.util.List;
 
 import com.amazonaws.services.s3.model.S3ObjectSummary;
 /**
- * 
+ * This is a simple wrapper for carrying picked up summaries of S3 bucket objects
+ * that mastches the last modification date criteria along with the keys of any objects
+ * regardless their modification date.
  * @author laurent
  */
 public class S3ObjectSummaries implements Serializable{
@@ -33,19 +35,25 @@ public class S3ObjectSummaries implements Serializable{
 
    private Long lastScanTime;
    
-   private List<S3ObjectSummary> summaries;
+   private List<String> keys;
+   private List<S3ObjectSummary> pickedSummaries;
 
    
-   public S3ObjectSummaries(Long lastScanTime, List<S3ObjectSummary> changes){
+   public S3ObjectSummaries(Long lastScanTime, List<S3ObjectSummary> summaries, List<String> keys){
       this.lastScanTime = lastScanTime;
-      this.summaries = changes;
+      this.pickedSummaries = summaries;
+      this.keys = keys;
    }
    
    public Long getLastScanTime(){
       return lastScanTime;
    }
 
-   public List<S3ObjectSummary> getSummaries(){
-      return summaries;
+   public List<String> getKeys(){
+      return keys;
+   }
+   
+   public List<S3ObjectSummary> getPickedSummaries(){
+      return pickedSummaries;
    }
 }

@@ -55,9 +55,9 @@ public class S3Connector{
    }
    
    /**
-    * 
-    * @param bucketName
-    * @param pathPrefix
+    * Connect to the specified bucket using previously given accesskey and secretkey.
+    * @param bucketName Name of the bucket to connect to
+    * @param pathPrefix Prefix that will be later used for filtering documents
     */
    public void connectUserBucket(String bucketName, String pathPrefix){
       this.bucketName = bucketName;
@@ -68,14 +68,16 @@ public class S3Connector{
    }
    
    /**
-    * 
-    * @param lastScanTime
-    * @return
+    * Select and retrieves summaries of object into bucket and of given path prefix
+    * that have modification date younger than lastScanTime.
+    * @param lastScanTime Last modification date filter
+    * @return Summaries of picked objects.
     */
    public S3ObjectSummaries getObjectSummaries(Long lastScanTime){
       if (logger.isDebugEnabled()){
          logger.debug("Getting buckets changes since {}", lastScanTime);
       }
+      List<String> keys = new ArrayList<String>();
       List<S3ObjectSummary> result = new ArrayList<S3ObjectSummary>();
       
       // Store the scan time to return before doing big queries...
@@ -97,6 +99,7 @@ public class S3Connector{
             if (logger.isDebugEnabled()){
                logger.debug("Getting {} last modified on {}", summary.getKey(), summary.getLastModified());
             }
+            keys.add(summary.getKey());
             if (summary.getLastModified().getTime() > lastScanTime){
                logger.debug("  Picked !");
                result.add(summary);
@@ -106,7 +109,7 @@ public class S3Connector{
       }
       
       // Wrap results and latest scan time.
-      return new S3ObjectSummaries(lastScanTimeToReturn, result);
+      return new S3ObjectSummaries(lastScanTimeToReturn, result, keys);
    }
    
    /**

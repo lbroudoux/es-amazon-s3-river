@@ -53,7 +53,7 @@ import com.github.lbroudoux.elasticsearch.river.s3.connector.S3Connector;
 
 import static org.elasticsearch.common.xcontent.XContentFactory.jsonBuilder;
 /**
- * 
+ * A River component for scanning and indexing Amazon S3 documents into Elasticsearch.
  * @author laurent
  */
 public class S3River extends AbstractRiverComponent implements River{
@@ -339,20 +339,21 @@ public class S3River extends AbstractRiverComponent implements River{
          List<String> previousFileIds = getAlreadyIndexFileIds();
          
          // Browse change and checks if its indexable before starting.
-         List<String> scannedFileIds = new ArrayList<String>();
-         for (S3ObjectSummary summary : summaries.getSummaries()){
+         for (S3ObjectSummary summary : summaries.getPickedSummaries()){
             if (S3RiverUtil.isIndexable(summary.getKey(), feedDefinition.getIncludes(), feedDefinition.getExcludes())){
-               String fileId = indexFile(summary);
-               if (fileId != null){
-                  scannedFileIds.add(fileId);
-               }
+               indexFile(summary);
             }
          }
          
          // Now, because we do not get changes but only present files, we should 
          // compare previously indexed files with latest to extract deleted ones...
+         // But before, we need to produce a list of index ids corresponding to S3 keys.
+         List<String> summariesIds = new ArrayList<String>();
+         for (String key : summaries.getKeys()){
+            summariesIds.add(buildIndexIdFromS3Key(key));
+         }
          for (String previousFileId : previousFileIds){
-            if (!scannedFileIds.contains(previousFileId)){
+            if (!summariesIds.contains(previousFileId)){
                esDelete(indexName, typeName, previousFileId);
             }
          }
@@ -390,7 +391,7 @@ public class S3River extends AbstractRiverComponent implements River{
             byte[] fileContent = s3.getContent(summary);
             if (fileContent != null){
                // Build a unique id from S3 unique summary key. 
-               String fileId = summary.getKey().replace('/', '-');
+               String fileId = buildIndexIdFromS3Key(summary.getKey());
                esIndex(indexName, typeName, fileId,
                      jsonBuilder()
                         .startObject()
@@ -407,6 +408,11 @@ public class S3River extends AbstractRiverComponent implements River{
             logger.warn("Can not index " + summary.getKey() + " : " + e.getMessage());
          }
          return null;
+      }
+      
+      /** Build a unique id from S3 unique summary key. */
+      private String buildIndexIdFromS3Key(String key){
+         return key.replace('/', '-');
       }
       
       /** Update river last changes id value.*/
