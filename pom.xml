@@ -27,6 +27,15 @@
       <timezone>+1</timezone>
     </developer>
   </developers>
+  <scm>
+    <url>scm:git@github.com:lbroudoux/es-amazon-s3-river.git</url>
+    <connection>scm:git:git@github.com:lbroudoux/es-amazon-s3-river.git</connection>
+    <developerConnection>scm:git:git@github.com:lbroudoux/es-amazon-s3-river.git</developerConnection>
+  </scm>
+  <issueManagement>
+    <system>GitHub</system>
+    <url>https://github.com/lbroudoux/es-amazon-s3-river/issues/</url>
+  </issueManagement>
   
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
