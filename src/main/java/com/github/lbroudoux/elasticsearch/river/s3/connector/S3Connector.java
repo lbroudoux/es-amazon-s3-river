@@ -34,6 +34,7 @@ import com.amazonaws.services.s3.model.ListObjectsRequest;
 import com.amazonaws.services.s3.model.ObjectListing;
 import com.amazonaws.services.s3.model.S3Object;
 import com.amazonaws.services.s3.model.S3ObjectSummary;
+import com.github.lbroudoux.elasticsearch.river.s3.river.S3RiverFeedDefinition;
 /**
  * This is a connector for querying and retrieving files or folders from
  * an Amazon S3 bucket. Credentials are mandatory for connecting to remote drive.
@@ -157,5 +158,24 @@ public class S3Connector{
          } catch (IOException e) {
          }
       }
+   }
+   
+   /**
+    * Get the download url of this S3 object. May return null if the
+    * object bucket and key cannot be converted to a URL.
+    * @param summary A S3 object
+    * @param feedDefinition The holder of S3 feed definition.
+    * @return The resource url if possible (access is subject to AWS credential)
+    */
+   public String getDownloadUrl(S3ObjectSummary summary, S3RiverFeedDefinition feedDefinition){
+      String resourceUrl = s3Client.getResourceUrl(summary.getBucketName(), summary.getKey()); 
+      // If a download host (actually a vhost such as cloudfront offers) is specified, use it to
+      // recreate a vhosted resource url. This is made by substitution of the generic host name in url. 
+      if (resourceUrl != null && feedDefinition.getDownloadHost() != null){
+         int hostPosEnd = resourceUrl.indexOf("s3.amazonaws.com/") + "s3.amazonaws.com".length();
+         String vhostResourceUrl = feedDefinition.getDownloadHost() + resourceUrl.substring(hostPosEnd);
+         return vhostResourceUrl;
+      }
+      return resourceUrl;
    }
 }

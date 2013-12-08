@@ -27,7 +27,7 @@ import org.elasticsearch.common.Strings;
 import org.elasticsearch.common.xcontent.XContentBuilder;
 import org.elasticsearch.common.xcontent.support.XContentMapValues;
 /**
- * 
+ * Utility class for Amazon S3 indexing management.
  * @author laurent
  */
 public class S3RiverUtil{
@@ -36,6 +36,7 @@ public class S3RiverUtil{
    
    public static final String DOC_FIELD_TITLE = "title";
    public static final String DOC_FIELD_MODIFIED_DATE = "modifiedDate";
+   public static final String DOC_FIELD_SOURCE_URL = "source_url";
    
    /**
     * Build mapping description for Amazon S3 files.
@@ -48,6 +49,7 @@ public class S3RiverUtil{
             .startObject(type).startObject("properties")
             .startObject(DOC_FIELD_TITLE).field("type", "string").field("analyzer","keyword").endObject()
             .startObject(DOC_FIELD_MODIFIED_DATE).field("type", "date").endObject()
+            .startObject(DOC_FIELD_SOURCE_URL).field("type", "string").endObject()
             .startObject("file")
             .field("type", "attachment")
                .startObject("fields")

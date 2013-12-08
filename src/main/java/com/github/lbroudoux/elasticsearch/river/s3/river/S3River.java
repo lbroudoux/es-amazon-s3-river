@@ -89,6 +89,7 @@ public class S3River extends AbstractRiverComponent implements River{
          String feedname = XContentMapValues.nodeStringValue(feed.get("name"), null);
          String bucket = XContentMapValues.nodeStringValue(feed.get("bucket"), null);
          String pathPrefix = XContentMapValues.nodeStringValue(feed.get("pathPrefix"), null);
+         String downloadHost = XContentMapValues.nodeStringValue(feed.get("download_host"), null);
          int updateRate = XContentMapValues.nodeIntegerValue(feed.get("update_rate"), 15 * 60 * 1000);
          
          String[] includes = S3RiverUtil.buildArrayFromSettings(settings.settings(), "amazon-s3.includes");
@@ -98,8 +99,8 @@ public class S3River extends AbstractRiverComponent implements River{
          String accessKey = XContentMapValues.nodeStringValue(feed.get("accessKey"), null);
          String secretKey = XContentMapValues.nodeStringValue(feed.get("secretKey"), null);
          
-         feedDefinition = new S3RiverFeedDefinition(feedname, bucket, pathPrefix, updateRate, 
-               Arrays.asList(includes), Arrays.asList(excludes), accessKey, secretKey);
+         feedDefinition = new S3RiverFeedDefinition(feedname, bucket, pathPrefix, downloadHost,
+               updateRate, Arrays.asList(includes), Arrays.asList(excludes), accessKey, secretKey);
       } else {
          logger.error("You didn't define the amazon-s3 settings. Exiting... See https://github.com/lbroudoux/es-amazon-s3-river");
          indexName = null;
@@ -397,6 +398,7 @@ public class S3River extends AbstractRiverComponent implements River{
                         .startObject()
                            .field(S3RiverUtil.DOC_FIELD_TITLE, summary.getKey().substring(summary.getKey().lastIndexOf('/')+1))
                            .field(S3RiverUtil.DOC_FIELD_MODIFIED_DATE, summary.getLastModified().getTime())
+                           .field(S3RiverUtil.DOC_FIELD_SOURCE_URL, s3.getDownloadUrl(summary, feedDefinition))
                            .startObject("file")
                               .field("_name", summary.getKey().substring(summary.getKey().lastIndexOf('/')+1))
                               .field("content", Base64.encodeBytes(fileContent))

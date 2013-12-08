@@ -28,17 +28,19 @@ public class S3RiverFeedDefinition{
    private String feedname;
    private String bucket;
    private String pathPrefix;
+   private String downloadHost;
    private int updateRate;
    private List<String> includes;
    private List<String> excludes;
    private String accessKey;
    private String secretKey;
    
-   public S3RiverFeedDefinition(String feedname, String bucket, String pathPrefix, int updateRate, 
+   public S3RiverFeedDefinition(String feedname, String bucket, String pathPrefix, String downloadHost, int updateRate, 
          List<String> includes, List<String> excludes, String accessKey, String secretKey){
       this.feedname = feedname;
       this.bucket = bucket;
       this.pathPrefix = pathPrefix;
+      this.downloadHost = downloadHost;
       this.updateRate = updateRate;
       this.includes = includes;
       this.excludes = excludes;
@@ -67,6 +69,13 @@ public class S3RiverFeedDefinition{
       this.pathPrefix = pathPrefix;
    }
    
+   public String getDownloadHost() {
+      return downloadHost;
+   }
+   public void setDownloadHost(String downloadHost) {
+      this.downloadHost = downloadHost;
+   }
+
    public int getUpdateRate() {
       return updateRate;
    }
