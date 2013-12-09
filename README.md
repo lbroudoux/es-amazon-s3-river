@@ -5,7 +5,9 @@ Amazon S3 river for Elasticsearch
 
 This river plugin helps to index documents from a Amazon S3 account buckets.
 
-*WARNING*: You need to have the [Attachment Plugin](https://github.com/elasticsearch/elasticsearch-mapper-attachments).
+*WARNING*: For 0.0.1 released version, you need to have the [Attachment Plugin](https://github.com/elasticsearch/elasticsearch-mapper-attachments).
+
+*WARNING*: Starting from 0.0.2, you don't need anymore the [Attachment Plugin](https://github.com/elasticsearch/elasticsearch-mapper-attachments) as we use now directly [Tika](http://tika.apache.org/), see [issue #2](https://github.com/lbroudoux/es-amazon-s3-river/issues/2).
 
 Versions
 --------
@@ -16,13 +18,21 @@ Versions
          <td>Amazon S3 River Plugin</td>
          <td>ElasticSearch</td>
          <td>Attachment Plugin</td>
+         <td>Tika</td>
       </tr>
    </thead>
    <tbody>
       <tr>
-         <td>master (0.0.1-SNAPSHOT)</td>
+         <td>master (0.0.2-SNAPSHOT)</td>
+         <td>0.90.0</td>
+         <td>No more used</td>
+         <td>1.4</td>
+      </tr>
+      <tr>
+         <td>0.0.1</td>
          <td>0.90.0</td>
          <td>1.7.0</td>
+         <td></td>
       </tr>
    </tbody>
 </table>
