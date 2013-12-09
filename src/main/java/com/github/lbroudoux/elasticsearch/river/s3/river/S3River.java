@@ -23,6 +23,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 
+import org.apache.tika.metadata.Metadata;
 import org.elasticsearch.ExceptionsHelper;
 import org.elasticsearch.action.admin.indices.mapping.put.PutMappingResponse;
 import org.elasticsearch.action.bulk.BulkRequestBuilder;
@@ -35,8 +36,8 @@ import org.elasticsearch.cluster.ClusterState;
 import org.elasticsearch.cluster.block.ClusterBlockException;
 import org.elasticsearch.cluster.metadata.IndexMetaData;
 import org.elasticsearch.cluster.metadata.MappingMetaData;
-import org.elasticsearch.common.Base64;
 import org.elasticsearch.common.inject.Inject;
+import org.elasticsearch.common.io.stream.BytesStreamInput;
 import org.elasticsearch.common.util.concurrent.EsExecutors;
 import org.elasticsearch.common.xcontent.XContentBuilder;
 import org.elasticsearch.common.xcontent.support.XContentMapValues;
@@ -50,6 +51,7 @@ import org.elasticsearch.search.SearchHit;
 import com.amazonaws.services.s3.model.S3ObjectSummary;
 import com.github.lbroudoux.elasticsearch.river.s3.connector.S3ObjectSummaries;
 import com.github.lbroudoux.elasticsearch.river.s3.connector.S3Connector;
+import com.github.lbroudoux.elasticsearch.river.s3.river.TikaHolder;
 
 import static org.elasticsearch.common.xcontent.XContentFactory.jsonBuilder;
 /**
@@ -390,9 +392,15 @@ public class S3River extends AbstractRiverComponent implements River{
          
          try{
             byte[] fileContent = s3.getContent(summary);
+            
             if (fileContent != null){
                // Build a unique id from S3 unique summary key. 
                String fileId = buildIndexIdFromS3Key(summary.getKey());
+               
+               // Parse content using Tika directly.
+               String parsedContent = TikaHolder.tika().parseToString(
+                     new BytesStreamInput(fileContent, false), new Metadata());
+               
                esIndex(indexName, typeName, fileId,
                      jsonBuilder()
                         .startObject()
@@ -401,7 +409,8 @@ public class S3River extends AbstractRiverComponent implements River{
                            .field(S3RiverUtil.DOC_FIELD_SOURCE_URL, s3.getDownloadUrl(summary, feedDefinition))
                            .startObject("file")
                               .field("_name", summary.getKey().substring(summary.getKey().lastIndexOf('/')+1))
-                              .field("content", Base64.encodeBytes(fileContent))
+                              .field("title", summary.getKey().substring(summary.getKey().lastIndexOf('/')+1))
+                              .field("file", parsedContent)
                            .endObject()
                         .endObject());
                return fileId;

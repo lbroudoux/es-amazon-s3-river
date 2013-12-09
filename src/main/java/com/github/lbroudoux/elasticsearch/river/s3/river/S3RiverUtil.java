@@ -51,16 +51,15 @@ public class S3RiverUtil{
             .startObject(DOC_FIELD_MODIFIED_DATE).field("type", "date").endObject()
             .startObject(DOC_FIELD_SOURCE_URL).field("type", "string").endObject()
             .startObject("file")
-            .field("type", "attachment")
-               .startObject("fields")
-                  .startObject("title").field("store", "yes").endObject()
-                  .startObject("file")
+               .startObject("properties")
+                  .startObject("title").field("type", "string").field("store", "yes").endObject()
+                  .startObject("file").field("type", "string")
                      .field("term_vector", "with_positions_offsets")
                      .field("store", "yes")
                   .endObject()
                .endObject()
-         .endObject()
-         .endObject().endObject().endObject();
+            .endObject()
+            .endObject().endObject().endObject();
       return xbMapping;
    }
    
