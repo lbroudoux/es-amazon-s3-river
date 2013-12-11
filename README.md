@@ -111,6 +111,20 @@ $ curl -XPUT 'http://localhost:9200/_river/mys3docs/_meta' -d '{
 
 By default, river is using an index that have the same name (`mys3docs` in the above example).
 
+*From 0.0.2 version*
+
+The `source_url` of documents is now stored within Elasticsearch index in order to allow you to access
+later the whole document content from your application (this is indeed a use case coming from [Scrutmydocs](http://www.scrutmydocs.org)).
+
+By default, the plugin uses what is called the *resourceUrl* of a S3 bucket document. If the document have
+been made public within S3, it can be accessed directly from your browser. If it's not the case, the stored url
+is intended to be used by a regular S3 client that has the allowed set of credentials to access the document.
+
+Another option to easily distribute S3 content is to setup a Web proxy in front of S3 such as CloudFront (see 
+[Service Private Content With CloudFront](http://docs.aws.amazon.com/AmazonCloudFront/latest/DeveloperGuide/PrivateContent.html)).
+In that later case, you'll want to rewrite `source_url` by substituting the S3 part by your own host name. This
+plugin allows you to do that by specifying a `download_host` as a river properties.
+
 
 Specifying index options
 ------------------------
@@ -167,6 +181,43 @@ When the river detect a new type, it creates automatically a mapping for this ty
       "file" : {
         "type" : "attachment",
         "fields" : {
+          "file" : {
+            "type" : "string",
+            "store" : "yes",
+            "term_vector" : "with_positions_offsets"
+          },
+          "title" : {
+            "type" : "string",
+            "store" : "yes"
+          }
+        }
+      }
+    }
+  }
+}
+``` 
+
+*From 0.0.2 version*
+
+We now use directly Tika instead of the mapper-attachmen plugin.
+
+```javascript
+{
+  "doc" : {
+    "properties" : {
+      "title" : {
+        "type" : "string",
+        "analyzer" : "keyword"
+      },
+      "modifiedDate" : {
+        "type" : "date",
+        "format" : "dateOptionalTime"
+      },
+      "source_url" : {
+        "type" : "string"
+      },
+      "file" : {
+        "properties" : {
           "file" : {
             "type" : "string",
             "store" : "yes",
