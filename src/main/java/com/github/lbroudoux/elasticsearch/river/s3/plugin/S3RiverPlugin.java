@@ -20,11 +20,13 @@ package com.github.lbroudoux.elasticsearch.river.s3.plugin;
 
 import org.elasticsearch.common.inject.Module;
 import org.elasticsearch.plugins.AbstractPlugin;
+import org.elasticsearch.rest.RestModule;
 import org.elasticsearch.river.RiversModule;
 
+import com.github.lbroudoux.elasticsearch.river.s3.rest.S3ManageAction;
 import com.github.lbroudoux.elasticsearch.river.s3.river.S3RiverModule;
 /**
- * 
+ * Amazon S3 River plugin definition.
  * @author laurent
  */
 public class S3RiverPlugin extends AbstractPlugin{
@@ -43,6 +45,9 @@ public class S3RiverPlugin extends AbstractPlugin{
    public void processModule(Module module){
       if (module instanceof RiversModule){
          ((RiversModule) module).registerRiver("amazon-s3", S3RiverModule.class);
+      }
+      if (module instanceof RestModule) {
+         ((RestModule) module).addRestAction(S3ManageAction.class);
       }
    }
 }

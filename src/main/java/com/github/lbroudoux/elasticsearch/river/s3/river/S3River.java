@@ -268,14 +268,18 @@ public class S3River extends AbstractRiverComponent implements River{
             }
             
             try{
-               bulk = client.prepareBulk();
-               // Scan folder starting from last changes id, then record the new one.
-               Long lastScanTime = getLastScanTimeFromRiver("_lastScanTime");
-               lastScanTime = scan(lastScanTime);
-               updateRiver("_lastScanTime", lastScanTime);
-               
-               // If some bulkActions remains, we should commit them
-               commitBulk();
+               if (isStarted()){
+                  bulk = client.prepareBulk();
+                  // Scan folder starting from last changes id, then record the new one.
+                  Long lastScanTime = getLastScanTimeFromRiver("_lastScanTime");
+                  lastScanTime = scan(lastScanTime);
+                  updateRiver("_lastScanTime", lastScanTime);
+                  
+                  // If some bulkActions remains, we should commit them
+                  commitBulk();
+               } else {
+                  logger.info("Amazon S3 River is disabled for {}", riverName().name());
+               }
             } catch (Exception e){
                logger.warn("Error while indexing content from {}", feedDefinition.getBucket());
                if (logger.isDebugEnabled()){
@@ -292,6 +296,31 @@ public class S3River extends AbstractRiverComponent implements River{
             } catch (InterruptedException ie){
             }
          }
+      }
+      
+      private boolean isStarted(){
+         // Refresh index before querying it.
+         client.admin().indices().prepareRefresh("_river").execute().actionGet();
+         GetResponse isStartedGetResponse = client.prepareGet("_river", riverName().name(), "_s3status").execute().actionGet();
+         try{
+            if (!isStartedGetResponse.isExists()){
+               XContentBuilder xb = jsonBuilder().startObject()
+                     .startObject("amazon-s3")
+                        .field("feedname", feedDefinition.getFeedname())
+                        .field("status", "STARTED").endObject()
+                     .endObject();
+               client.prepareIndex("_river", riverName.name(), "_s3status").setSource(xb).execute();
+               return true;
+            } else {
+               String status = (String)XContentMapValues.extractValue("amazon-s3.status", isStartedGetResponse.getSourceAsMap());
+               if ("STOPPED".equals(status)){
+                  return false;
+               }
+            }
+         } catch (Exception e){
+            logger.warn("failed to get status for " + riverName().name() + ", throttling....", e);
+         }
+         return true;
       }
       
       @SuppressWarnings("unchecked")
