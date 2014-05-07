@@ -24,16 +24,13 @@ import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.List;
 
+import com.amazonaws.services.s3.model.*;
 import org.elasticsearch.common.logging.ESLogger;
 import org.elasticsearch.common.logging.Loggers;
 
 import com.amazonaws.auth.AWSCredentials;
 import com.amazonaws.auth.BasicAWSCredentials;
 import com.amazonaws.services.s3.AmazonS3Client;
-import com.amazonaws.services.s3.model.ListObjectsRequest;
-import com.amazonaws.services.s3.model.ObjectListing;
-import com.amazonaws.services.s3.model.S3Object;
-import com.amazonaws.services.s3.model.S3ObjectSummary;
 import com.github.lbroudoux.elasticsearch.river.s3.river.S3RiverFeedDefinition;
 /**
  * This is a connector for querying and retrieving files or folders from
@@ -59,13 +56,16 @@ public class S3Connector{
     * Connect to the specified bucket using previously given accesskey and secretkey.
     * @param bucketName Name of the bucket to connect to
     * @param pathPrefix Prefix that will be later used for filtering documents
+    * @throws AmazonS3Exception when access or secret keys are wrong or bucket does not exists
     */
-   public void connectUserBucket(String bucketName, String pathPrefix){
+   public void connectUserBucket(String bucketName, String pathPrefix) throws AmazonS3Exception{
       this.bucketName = bucketName;
       this.pathPrefix = pathPrefix;
       AWSCredentials credentials = new BasicAWSCredentials(accessKey, secretKey);
       s3Client = new AmazonS3Client(credentials);
-      String location = s3Client.getBucketLocation(bucketName);
+      // Getting location seems odd as we don't use it later and doesBucketExists() seems
+      // more appropriate... However, this later returns true even for non existing buckets !
+      s3Client.getBucketLocation(bucketName);
    }
    
    /**

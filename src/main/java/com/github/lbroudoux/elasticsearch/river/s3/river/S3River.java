@@ -23,6 +23,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 
+import com.amazonaws.services.s3.model.AmazonS3Exception;
 import org.apache.tika.metadata.Metadata;
 import org.elasticsearch.ExceptionsHelper;
 import org.elasticsearch.action.admin.indices.mapping.put.PutMappingResponse;
@@ -129,9 +130,27 @@ public class S3River extends AbstractRiverComponent implements River{
          bulkSize = 100;
       }
       
-      // We need to connect to Amazon S3.
+      // We need to connect to Amazon S3 after ensure mandatory settings are here.
+      if (feedDefinition.getAccessKey() == null){
+         logger.error("Amazon S3 accessKey should not be null. Please fix this.");
+         throw new IllegalArgumentException("Amazon S3 accessKey should not be null.");
+      }
+      if (feedDefinition.getSecretKey() == null){
+         logger.error("Amazon S3 secretKey should not be null. Please fix this.");
+         throw new IllegalArgumentException("Amazon S3 secretKey should not be null.");
+      }
+      if (feedDefinition.getBucket() == null){
+         logger.error("Amazon S3 bucket should not be null. Please fix this.");
+         throw new IllegalArgumentException("Amazon S3 bucket should not be null.");
+      }
       s3 = new S3Connector(feedDefinition.getAccessKey(), feedDefinition.getSecretKey());
-      s3.connectUserBucket(feedDefinition.getBucket(), feedDefinition.getPathPrefix());
+      try {
+         s3.connectUserBucket(feedDefinition.getBucket(), feedDefinition.getPathPrefix());
+      } catch (AmazonS3Exception ase){
+         logger.error("Exception while connecting Amazon S3 user bucket. "
+               + "Either access key, secret key or bucket name are incorrect");
+         throw ase;
+      }
    }
    
    @Override
