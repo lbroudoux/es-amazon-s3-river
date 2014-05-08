@@ -27,8 +27,7 @@ import com.amazonaws.services.s3.model.AmazonS3Exception;
 import org.apache.tika.metadata.Metadata;
 import org.elasticsearch.ExceptionsHelper;
 import org.elasticsearch.action.admin.indices.mapping.put.PutMappingResponse;
-import org.elasticsearch.action.bulk.BulkRequestBuilder;
-import org.elasticsearch.action.bulk.BulkResponse;
+import org.elasticsearch.action.bulk.*;
 import org.elasticsearch.action.get.GetResponse;
 import org.elasticsearch.action.search.SearchResponse;
 import org.elasticsearch.action.search.SearchType;
@@ -67,10 +66,12 @@ public class S3River extends AbstractRiverComponent implements River{
 
    private final String typeName;
 
-   private final long bulkSize;
+   private final int bulkSize;
    
    private volatile Thread feedThread;
-   
+
+   private volatile BulkProcessor bulkProcessor;
+
    private volatile boolean closed = false;
    
    private final S3RiverFeedDefinition feedDefinition;
@@ -118,12 +119,9 @@ public class S3River extends AbstractRiverComponent implements River{
       if (settings.settings().containsKey("index")) {
          Map<String, Object> indexSettings = (Map<String, Object>)settings.settings().get("index");
          
-         indexName = XContentMapValues.nodeStringValue(
-               indexSettings.get("index"), riverName.name());
-         typeName = XContentMapValues.nodeStringValue(
-               indexSettings.get("type"), S3RiverUtil.INDEX_TYPE_DOC);
-         bulkSize = XContentMapValues.nodeLongValue(
-               indexSettings.get("bulk_size"), 100);
+         indexName = XContentMapValues.nodeStringValue(indexSettings.get("index"), riverName.name());
+         typeName = XContentMapValues.nodeStringValue(indexSettings.get("type"), S3RiverUtil.INDEX_TYPE_DOC);
+         bulkSize = XContentMapValues.nodeIntegerValue(indexSettings.get("bulk_size"), 100);
       } else {
          indexName = riverName.name();
          typeName = S3RiverUtil.INDEX_TYPE_DOC;
@@ -171,7 +169,7 @@ public class S3River extends AbstractRiverComponent implements River{
          }
       }
       
-      try{
+      try {
          // If needed, we create the new mapping for files
          pushMapping(indexName, typeName, S3RiverUtil.buildS3FileMapping(typeName));
       } catch (Exception e) {
@@ -179,7 +177,38 @@ public class S3River extends AbstractRiverComponent implements River{
                e, indexName, typeName);
          return;
       }
-               
+
+      // Creating bulk processor
+      this.bulkProcessor = BulkProcessor.builder(client, new BulkProcessor.Listener() {
+         @Override
+         public void beforeBulk(long id, BulkRequest request) {
+            logger.debug("Going to execute new bulk composed of {} actions", request.numberOfActions());
+         }
+
+         @Override
+         public void afterBulk(long id, BulkRequest request, BulkResponse response) {
+            logger.debug("Executed bulk composed of {} actions", request.numberOfActions());
+            if (response.hasFailures()) {
+               logger.warn("There was failures while executing bulk", response.buildFailureMessage());
+               if (logger.isDebugEnabled()) {
+                  for (BulkItemResponse item : response.getItems()) {
+                     if (item.isFailed()) {
+                        logger.debug("Error for {}/{}/{} for {} operation: {}", item.getIndex(),
+                              item.getType(), item.getId(), item.getOpType(), item.getFailureMessage());
+                     }
+                  }
+               }
+            }
+         }
+
+         @Override
+         public void afterBulk(long id, BulkRequest request, Throwable throwable) {
+            logger.warn("Error executing bulk", throwable);
+         }
+      })
+            .setBulkActions(bulkSize)
+            .build();
+
       // We create as many Threads as there are feeds.
       feedThread = EsExecutors.daemonThreadFactory(settings.globalSettings(), "fs_slurper")
             .newThread(new S3Scanner(feedDefinition));
@@ -288,14 +317,10 @@ public class S3River extends AbstractRiverComponent implements River{
             
             try{
                if (isStarted()){
-                  bulk = client.prepareBulk();
                   // Scan folder starting from last changes id, then record the new one.
                   Long lastScanTime = getLastScanTimeFromRiver("_lastScanTime");
                   lastScanTime = scan(lastScanTime);
                   updateRiver("_lastScanTime", lastScanTime);
-                  
-                  // If some bulkActions remains, we should commit them
-                  commitBulk();
                } else {
                   logger.info("Amazon S3 River is disabled for {}", riverName().name());
                }
@@ -490,43 +515,7 @@ public class S3River extends AbstractRiverComponent implements River{
             .endObject();
          esIndex("_river", riverName.name(), lastScanTimeField, xb);
       }
-      
-      /**
-       * Commit to ES if something is in queue
-       * @throws Exception
-       */
-      private void commitBulk() throws Exception{
-         if (bulk != null && bulk.numberOfActions() > 0){
-            if (logger.isDebugEnabled()){
-               logger.debug("ES Bulk Commit is needed");
-            }
-            BulkResponse response = bulk.execute().actionGet();
-            if (response.hasFailures()){
-               logger.warn("Failed to execute " + response.buildFailureMessage());
-            }
-         }
-      }
-      
-      /**
-       * Commit to ES if we have too much in bulk 
-       * @throws Exception
-       */
-      private void commitBulkIfNeeded() throws Exception {
-         if (bulk != null && bulk.numberOfActions() > 0 && bulk.numberOfActions() >= bulkSize){
-            if (logger.isDebugEnabled()){
-               logger.debug("ES Bulk Commit is needed");
-            }
-            
-            BulkResponse response = bulk.execute().actionGet();
-            if (response.hasFailures()){
-               logger.warn("Failed to execute " + response.buildFailureMessage());
-            }
-            
-            // Reinit a new bulk.
-            bulk = client.prepareBulk();
-         }
-      }
-      
+
       /** Add to bulk an IndexRequest. */
       private void esIndex(String index, String type, String id, XContentBuilder xb) throws Exception{
          if (logger.isDebugEnabled()){
@@ -535,9 +524,7 @@ public class S3River extends AbstractRiverComponent implements River{
          if (logger.isTraceEnabled()){
             logger.trace("Json indexed : {}", xb.string());
          }
-         
-         bulk.add(client.prepareIndex(index, type, id).setSource(xb));
-         commitBulkIfNeeded();
+         bulkProcessor.add(client.prepareIndex(index, type, id).setSource(xb).request());
       }
 
       /** Add to bulk a DeleteRequest. */
@@ -545,8 +532,7 @@ public class S3River extends AbstractRiverComponent implements River{
          if (logger.isDebugEnabled()){
             logger.debug("Deleting from ES " + index + ", " + type + ", " + id);
          }
-         bulk.add(client.prepareDelete(index, type, id));
-         commitBulkIfNeeded();
+         bulkProcessor.add(client.prepareDelete(index, type, id).request());
       }
    }
 }
