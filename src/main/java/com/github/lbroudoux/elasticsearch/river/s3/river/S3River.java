@@ -95,6 +95,7 @@ public class S3River extends AbstractRiverComponent implements River{
          String pathPrefix = XContentMapValues.nodeStringValue(feed.get("pathPrefix"), null);
          String downloadHost = XContentMapValues.nodeStringValue(feed.get("download_host"), null);
          int updateRate = XContentMapValues.nodeIntegerValue(feed.get("update_rate"), 15 * 60 * 1000);
+         boolean jsonSupport = XContentMapValues.nodeBooleanValue(feed.get("json_support"), false);
          
          String[] includes = S3RiverUtil.buildArrayFromSettings(settings.settings(), "amazon-s3.includes");
          String[] excludes = S3RiverUtil.buildArrayFromSettings(settings.settings(), "amazon-s3.excludes");
@@ -104,7 +105,7 @@ public class S3River extends AbstractRiverComponent implements River{
          String secretKey = XContentMapValues.nodeStringValue(feed.get("secretKey"), null);
          
          feedDefinition = new S3RiverFeedDefinition(feedname, bucket, pathPrefix, downloadHost,
-               updateRate, Arrays.asList(includes), Arrays.asList(excludes), accessKey, secretKey);
+               updateRate, Arrays.asList(includes), Arrays.asList(excludes), accessKey, secretKey, jsonSupport);
       } else {
          logger.error("You didn't define the amazon-s3 settings. Exiting... See https://github.com/lbroudoux/es-amazon-s3-river");
          indexName = null;
@@ -171,7 +172,9 @@ public class S3River extends AbstractRiverComponent implements River{
       
       try {
          // If needed, we create the new mapping for files
-         pushMapping(indexName, typeName, S3RiverUtil.buildS3FileMapping(typeName));
+         if(!feedDefinition.isJsonSupport()) {
+            pushMapping(indexName, typeName, S3RiverUtil.buildS3FileMapping(typeName));
+         }
       } catch (Exception e) {
          logger.warn("Failed to create mapping for [{}/{}], disabling river...",
                e, indexName, typeName);
@@ -464,30 +467,35 @@ public class S3River extends AbstractRiverComponent implements River{
          }
          
          try{
-            byte[] fileContent = s3.getContent(summary);
-            
-            if (fileContent != null){
-               // Build a unique id from S3 unique summary key. 
-               String fileId = buildIndexIdFromS3Key(summary.getKey());
-               
-               // Parse content using Tika directly.
-               String parsedContent = TikaHolder.tika().parseToString(
-                     new BytesStreamInput(fileContent, false), new Metadata());
-               
-               esIndex(indexName, typeName, fileId,
-                     jsonBuilder()
-                        .startObject()
-                           .field(S3RiverUtil.DOC_FIELD_TITLE, summary.getKey().substring(summary.getKey().lastIndexOf('/')+1))
-                           .field(S3RiverUtil.DOC_FIELD_MODIFIED_DATE, summary.getLastModified().getTime())
-                           .field(S3RiverUtil.DOC_FIELD_SOURCE_URL, s3.getDownloadUrl(summary, feedDefinition))
-                           .startObject("file")
-                              .field("_name", summary.getKey().substring(summary.getKey().lastIndexOf('/')+1))
-                              .field("title", summary.getKey().substring(summary.getKey().lastIndexOf('/')+1))
-                              .field("file", parsedContent)
-                           .endObject()
-                        .endObject());
-               return fileId;
-            }
+             // Build a unique id from S3 unique summary key.
+             String fileId = buildIndexIdFromS3Key(summary.getKey());
+
+             if(feedDefinition.isJsonSupport()){
+                 esIndex(indexName, typeName, summary.getKey(), s3.getContent(summary));
+             } else {
+                 byte[] fileContent = s3.getContent(summary);
+
+                 if (fileContent != null) {
+
+                     // Parse content using Tika directly.
+                     String parsedContent = TikaHolder.tika().parseToString(
+                             new BytesStreamInput(fileContent, false), new Metadata());
+
+                     esIndex(indexName, typeName, fileId,
+                             jsonBuilder()
+                                     .startObject()
+                                     .field(S3RiverUtil.DOC_FIELD_TITLE, summary.getKey().substring(summary.getKey().lastIndexOf('/') + 1))
+                                     .field(S3RiverUtil.DOC_FIELD_MODIFIED_DATE, summary.getLastModified().getTime())
+                                     .field(S3RiverUtil.DOC_FIELD_SOURCE_URL, s3.getDownloadUrl(summary, feedDefinition))
+                                     .startObject("file")
+                                     .field("_name", summary.getKey().substring(summary.getKey().lastIndexOf('/') + 1))
+                                     .field("title", summary.getKey().substring(summary.getKey().lastIndexOf('/') + 1))
+                                     .field("file", parsedContent)
+                                     .endObject()
+                                     .endObject());
+                     return fileId;
+                 }
+             }
          } catch (Exception e) {
             logger.warn("Can not index " + summary.getKey() + " : " + e.getMessage());
          }
@@ -526,6 +534,17 @@ public class S3River extends AbstractRiverComponent implements River{
          }
          bulkProcessor.add(client.prepareIndex(index, type, id).setSource(xb).request());
       }
+
+       /** Add to bulk an IndexRequest. */
+       private void esIndex(String index, String type, String id, byte[] json) throws Exception{
+           if (logger.isDebugEnabled()){
+               logger.debug("Indexing in ES " + index + ", " + type + ", " + id);
+           }
+           if (logger.isTraceEnabled()){
+               logger.trace("Json indexed : {}", json);
+           }
+           bulkProcessor.add(client.prepareIndex(index, type, id).setSource(json).request());
+       }
 
       /** Add to bulk a DeleteRequest. */
       private void esDelete(String index, String type, String id) throws Exception{
