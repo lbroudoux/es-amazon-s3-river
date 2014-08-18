@@ -34,9 +34,10 @@ public class S3RiverFeedDefinition{
    private List<String> excludes;
    private String accessKey;
    private String secretKey;
+   private boolean jsonSupport;
    
    public S3RiverFeedDefinition(String feedname, String bucket, String pathPrefix, String downloadHost, int updateRate, 
-         List<String> includes, List<String> excludes, String accessKey, String secretKey){
+         List<String> includes, List<String> excludes, String accessKey, String secretKey, boolean jsonSupport){
       this.feedname = feedname;
       this.bucket = bucket;
       this.pathPrefix = pathPrefix;
@@ -110,4 +111,6 @@ public class S3RiverFeedDefinition{
    public void setSecretKey(String secretKey) {
       this.secretKey = secretKey;
    }
+
+   public boolean isJsonSupport(){ return jsonSupport; }
 }
