@@ -47,6 +47,7 @@ public class S3RiverFeedDefinition{
       this.excludes = excludes;
       this.accessKey = accessKey;
       this.secretKey = secretKey;
+      this.jsonSupport = jsonSupport;
    }
    
    public String getFeedname() {
