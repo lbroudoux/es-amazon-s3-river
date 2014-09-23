@@ -19,10 +19,11 @@
 package com.github.lbroudoux.elasticsearch.river.s3.river;
 
 import static junit.framework.Assert.*;
+
 import java.util.Arrays;
 import java.util.List;
-import org.junit.Test;
 
+import org.junit.Test;
 /**
  * Test case for S3RiverUtil class.
  * @author laurent

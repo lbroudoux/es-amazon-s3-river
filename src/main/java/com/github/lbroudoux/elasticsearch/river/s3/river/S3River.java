@@ -467,35 +467,35 @@ public class S3River extends AbstractRiverComponent implements River{
          }
          
          try{
-             // Build a unique id from S3 unique summary key.
-             String fileId = buildIndexIdFromS3Key(summary.getKey());
+            // Build a unique id from S3 unique summary key.
+            String fileId = buildIndexIdFromS3Key(summary.getKey());
 
-             if(feedDefinition.isJsonSupport()){
-                 esIndex(indexName, typeName, summary.getKey(), s3.getContent(summary));
-             } else {
-                 byte[] fileContent = s3.getContent(summary);
+            if (feedDefinition.isJsonSupport()){
+               esIndex(indexName, typeName, summary.getKey(), s3.getContent(summary));
+            } else {
+               byte[] fileContent = s3.getContent(summary);
 
-                 if (fileContent != null) {
+               if (fileContent != null) {
 
-                     // Parse content using Tika directly.
-                     String parsedContent = TikaHolder.tika().parseToString(
-                             new BytesStreamInput(fileContent, false), new Metadata());
+                  // Parse content using Tika directly.
+                  String parsedContent = TikaHolder.tika().parseToString(
+                        new BytesStreamInput(fileContent, false), new Metadata());
 
-                     esIndex(indexName, typeName, fileId,
-                             jsonBuilder()
-                                     .startObject()
-                                     .field(S3RiverUtil.DOC_FIELD_TITLE, summary.getKey().substring(summary.getKey().lastIndexOf('/') + 1))
-                                     .field(S3RiverUtil.DOC_FIELD_MODIFIED_DATE, summary.getLastModified().getTime())
-                                     .field(S3RiverUtil.DOC_FIELD_SOURCE_URL, s3.getDownloadUrl(summary, feedDefinition))
-                                     .startObject("file")
-                                     .field("_name", summary.getKey().substring(summary.getKey().lastIndexOf('/') + 1))
-                                     .field("title", summary.getKey().substring(summary.getKey().lastIndexOf('/') + 1))
-                                     .field("file", parsedContent)
-                                     .endObject()
-                                     .endObject());
-                     return fileId;
-                 }
-             }
+                  esIndex(indexName, typeName, fileId,
+                        jsonBuilder()
+                           .startObject()
+                              .field(S3RiverUtil.DOC_FIELD_TITLE, summary.getKey().substring(summary.getKey().lastIndexOf('/') + 1))
+                              .field(S3RiverUtil.DOC_FIELD_MODIFIED_DATE, summary.getLastModified().getTime())
+                              .field(S3RiverUtil.DOC_FIELD_SOURCE_URL, s3.getDownloadUrl(summary, feedDefinition))
+                              .startObject("file")
+                                 .field("_name", summary.getKey().substring(summary.getKey().lastIndexOf('/') + 1))
+                                 .field("title", summary.getKey().substring(summary.getKey().lastIndexOf('/') + 1))
+                                 .field("file", parsedContent)
+                              .endObject()
+                           .endObject());
+                  return fileId;
+               }
+            }
          } catch (Exception e) {
             logger.warn("Can not index " + summary.getKey() + " : " + e.getMessage());
          }
