@@ -157,8 +157,11 @@ public class S3River extends AbstractRiverComponent implements River{
       if (logger.isInfoEnabled()){
          logger.info("Starting amazon s3 river scanning");
       }
-      try{
-         client.admin().indices().prepareCreate(indexName).execute().actionGet();
+      try {
+         // Create the index if it doesn't exist
+         if (!client.admin().indices().prepareExists(indexName).execute().actionGet().isExists()) {
+            client.admin().indices().prepareCreate(indexName).execute().actionGet();
+         }
       } catch (Exception e) {
          if (ExceptionsHelper.unwrapCause(e) instanceof IndexAlreadyExistsException){
             // that's fine.
