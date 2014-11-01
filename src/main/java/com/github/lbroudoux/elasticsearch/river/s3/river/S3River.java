@@ -175,7 +175,7 @@ public class S3River extends AbstractRiverComponent implements River{
       
       try {
          // If needed, we create the new mapping for files
-         if(!feedDefinition.isJsonSupport()) {
+         if (!feedDefinition.isJsonSupport()) {
             pushMapping(indexName, typeName, S3RiverUtil.buildS3FileMapping(typeName));
          }
       } catch (Exception e) {
@@ -479,7 +479,6 @@ public class S3River extends AbstractRiverComponent implements River{
                byte[] fileContent = s3.getContent(summary);
 
                if (fileContent != null) {
-
                   // Parse content using Tika directly.
                   String parsedContent = TikaHolder.tika().parseToString(
                         new BytesStreamInput(fileContent, false), new Metadata());
@@ -538,16 +537,16 @@ public class S3River extends AbstractRiverComponent implements River{
          bulkProcessor.add(client.prepareIndex(index, type, id).setSource(xb).request());
       }
 
-       /** Add to bulk an IndexRequest. */
-       private void esIndex(String index, String type, String id, byte[] json) throws Exception{
-           if (logger.isDebugEnabled()){
-               logger.debug("Indexing in ES " + index + ", " + type + ", " + id);
-           }
-           if (logger.isTraceEnabled()){
-               logger.trace("Json indexed : {}", json);
-           }
-           bulkProcessor.add(client.prepareIndex(index, type, id).setSource(json).request());
-       }
+      /** Add to bulk an IndexRequest. */
+      private void esIndex(String index, String type, String id, byte[] json) throws Exception{
+         if (logger.isDebugEnabled()){
+            logger.debug("Indexing in ES " + index + ", " + type + ", " + id);
+         }
+         if (logger.isTraceEnabled()){
+            logger.trace("Json indexed : {}", json);
+         }
+         bulkProcessor.add(client.prepareIndex(index, type, id).setSource(json).request());
+      }
 
       /** Add to bulk a DeleteRequest. */
       private void esDelete(String index, String type, String id) throws Exception{
