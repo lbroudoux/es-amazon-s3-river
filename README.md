@@ -24,7 +24,7 @@ Versions
    <tbody>
       <tr>
          <td>master (0.0.4-SNAPSHOT)</td>
-         <td>1.0.0</td>
+         <td>1.0.x and 1.1.x</td>
          <td>No more used</td>
          <td>1.4</td>
       </tr>
