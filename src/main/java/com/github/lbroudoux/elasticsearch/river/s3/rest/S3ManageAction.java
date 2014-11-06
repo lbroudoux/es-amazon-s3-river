@@ -26,14 +26,13 @@ import org.elasticsearch.common.settings.Settings;
 import org.elasticsearch.common.xcontent.XContentBuilder;
 import org.elasticsearch.common.xcontent.XContentBuilderString;
 import org.elasticsearch.rest.BaseRestHandler;
+import org.elasticsearch.rest.BytesRestResponse;
 import org.elasticsearch.rest.RestChannel;
 import org.elasticsearch.rest.RestController;
 import org.elasticsearch.rest.RestRequest;
 import org.elasticsearch.rest.RestStatus;
-import org.elasticsearch.rest.XContentRestResponse;
-import org.elasticsearch.rest.XContentThrowableRestResponse;
+
 import org.elasticsearch.rest.RestRequest.Method;
-import org.elasticsearch.rest.action.support.RestXContentBuilder;
 
 import static org.elasticsearch.common.xcontent.XContentFactory.jsonBuilder;
 /**
@@ -56,7 +55,7 @@ public class S3ManageAction extends BaseRestHandler{
    }
    
    @Override
-   public void handleRequest(RestRequest request, RestChannel channel){
+   public void handleRequest(RestRequest request, RestChannel channel) throws Exception{
       if (logger.isDebugEnabled()){
          logger.debug("REST S3ManageAction called");
       }
@@ -83,23 +82,24 @@ public class S3ManageAction extends BaseRestHandler{
             client.prepareIndex("_river", rivername, "_s3status").setSource(xb).execute().actionGet();
          }
          
-         XContentBuilder builder = RestXContentBuilder.restContentBuilder(request);
+         XContentBuilder builder = jsonBuilder();
          builder
             .startObject()
                .field(new XContentBuilderString("ok"), true)
             .endObject();
-         channel.sendResponse(new XContentRestResponse(request, RestStatus.OK, builder));
+         channel.sendResponse(new BytesRestResponse(RestStatus.OK, builder));
       } catch (IOException e) {
          onFailure(request, channel, e);
       }
    }
    
    /** */
-   protected void onFailure(RestRequest request, RestChannel channel, Exception e){
+   private void onFailure(RestRequest request, RestChannel channel, Exception e) throws Exception{
       try{
-          channel.sendResponse(new XContentThrowableRestResponse(request, e));
+          channel.sendResponse(new BytesRestResponse(channel, e));
       } catch (IOException ioe){
          logger.error("Sending failure response fails !", e);
+         channel.sendResponse(new BytesRestResponse(RestStatus.INTERNAL_SERVER_ERROR));
       }
    }
 }
