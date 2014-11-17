@@ -2,7 +2,7 @@
   <modelVersion>4.0.0</modelVersion>
   <groupId>com.github.lbroudoux.elasticsearch</groupId>
   <artifactId>amazon-s3-river</artifactId>
-  <version>1.2.1-SNAPSHOT</version>
+  <version>1.3.0-SNAPSHOT</version>
   <packaging>jar</packaging>
 
   <parent>
@@ -40,7 +40,7 @@
 
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-    <elasticsearch.version>1.2.0</elasticsearch.version>
+    <elasticsearch.version>1.3.0</elasticsearch.version>
     <tika.version>1.4</tika.version>
   </properties>
   
