@@ -23,7 +23,13 @@ Versions
    </thead>
    <tbody>
       <tr>
-         <td>master (1.3.0-SNAPSHOT)</td>
+         <td>master (1.3.1-SNAPSHOT)</td>
+         <td>1.3.x</td>
+         <td>No more used</td>
+         <td>1.4</td>
+      </tr>
+      <tr>
+         <td>1.3.0</td>
          <td>1.3.x</td>
          <td>No more used</td>
          <td>1.4</td>
