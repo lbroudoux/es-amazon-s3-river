@@ -472,7 +472,8 @@ public class S3River extends AbstractRiverComponent implements River{
          try{
             // Build a unique id from S3 unique summary key.
             String fileId = buildIndexIdFromS3Key(summary.getKey());
-
+            Map<String,String> userMetadata = s3.getS3UserMetadata(summary);
+            
             if (feedDefinition.isJsonSupport()){
                esIndex(indexName, typeName, summary.getKey(), s3.getContent(summary));
             } else {
@@ -489,6 +490,7 @@ public class S3River extends AbstractRiverComponent implements River{
                               .field(S3RiverUtil.DOC_FIELD_TITLE, summary.getKey().substring(summary.getKey().lastIndexOf('/') + 1))
                               .field(S3RiverUtil.DOC_FIELD_MODIFIED_DATE, summary.getLastModified().getTime())
                               .field(S3RiverUtil.DOC_FIELD_SOURCE_URL, s3.getDownloadUrl(summary, feedDefinition))
+                              .field(S3RiverUtil.DOC_FIELD_METADATA, userMetadata)
                               .startObject("file")
                                  .field("_name", summary.getKey().substring(summary.getKey().lastIndexOf('/') + 1))
                                  .field("title", summary.getKey().substring(summary.getKey().lastIndexOf('/') + 1))

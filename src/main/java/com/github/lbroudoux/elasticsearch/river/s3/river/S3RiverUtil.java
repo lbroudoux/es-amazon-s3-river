@@ -37,6 +37,7 @@ public class S3RiverUtil{
    public static final String DOC_FIELD_TITLE = "title";
    public static final String DOC_FIELD_MODIFIED_DATE = "modifiedDate";
    public static final String DOC_FIELD_SOURCE_URL = "source_url";
+   public static final String DOC_FIELD_METADATA = "metadata";
    
    /**
     * Build mapping description for Amazon S3 files.
