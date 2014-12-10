@@ -26,17 +26,13 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
+import com.amazonaws.services.s3.model.*;
 import org.elasticsearch.common.logging.ESLogger;
 import org.elasticsearch.common.logging.Loggers;
 
 import com.amazonaws.auth.AWSCredentials;
 import com.amazonaws.auth.BasicAWSCredentials;
 import com.amazonaws.services.s3.AmazonS3Client;
-import com.amazonaws.services.s3.model.AmazonS3Exception;
-import com.amazonaws.services.s3.model.ListObjectsRequest;
-import com.amazonaws.services.s3.model.ObjectListing;
-import com.amazonaws.services.s3.model.S3Object;
-import com.amazonaws.services.s3.model.S3ObjectSummary;
 import com.github.lbroudoux.elasticsearch.river.s3.river.S3RiverFeedDefinition;
 /**
  * This is a connector for querying and retrieving files or folders from

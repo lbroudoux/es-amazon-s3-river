@@ -20,7 +20,6 @@ package com.github.lbroudoux.elasticsearch.river.s3.river;
 
 import static org.elasticsearch.common.xcontent.XContentFactory.jsonBuilder;
 
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 

@@ -472,7 +472,7 @@ public class S3River extends AbstractRiverComponent implements River{
          try{
             // Build a unique id from S3 unique summary key.
             String fileId = buildIndexIdFromS3Key(summary.getKey());
-            
+
             if (feedDefinition.isJsonSupport()){
                esIndex(indexName, typeName, summary.getKey(), s3.getContent(summary));
             } else {
