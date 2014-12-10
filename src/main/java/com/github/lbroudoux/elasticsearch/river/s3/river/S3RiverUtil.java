@@ -20,6 +20,7 @@ package com.github.lbroudoux.elasticsearch.river.s3.river;
 
 import static org.elasticsearch.common.xcontent.XContentFactory.jsonBuilder;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -51,7 +52,7 @@ public class S3RiverUtil{
             .startObject(DOC_FIELD_TITLE).field("type", "string").field("analyzer","keyword").endObject()
             .startObject(DOC_FIELD_MODIFIED_DATE).field("type", "date").endObject()
             .startObject(DOC_FIELD_SOURCE_URL).field("type", "string").endObject()
-            .startObject(DOC_FIELD_METADATA).field("type", "map").endObject()
+            .startObject(DOC_FIELD_METADATA).field("type", "object").endObject()
             .startObject("file")
                .startObject("properties")
                   .startObject("title").field("type", "string").field("store", "yes").endObject()
