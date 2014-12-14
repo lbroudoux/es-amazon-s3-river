@@ -22,7 +22,9 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 
 import com.amazonaws.services.s3.model.*;
 import org.elasticsearch.common.logging.ESLogger;
@@ -113,6 +115,10 @@ public class S3Connector{
       return new S3ObjectSummaries(lastScanTimeToReturn, result, keys);
    }
    
+   public Map<String,Object> getS3UserMetadata(String key){ 
+	   return Collections.<String, Object>unmodifiableMap(s3Client.getObjectMetadata(bucketName, key).getUserMetadata());
+   }
+
    /**
     * Download Amazon S3 file as byte array.
     * @param summary The summary of the S3 Object to download

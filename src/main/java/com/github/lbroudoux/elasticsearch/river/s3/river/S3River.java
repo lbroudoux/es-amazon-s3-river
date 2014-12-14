@@ -489,6 +489,7 @@ public class S3River extends AbstractRiverComponent implements River{
                               .field(S3RiverUtil.DOC_FIELD_TITLE, summary.getKey().substring(summary.getKey().lastIndexOf('/') + 1))
                               .field(S3RiverUtil.DOC_FIELD_MODIFIED_DATE, summary.getLastModified().getTime())
                               .field(S3RiverUtil.DOC_FIELD_SOURCE_URL, s3.getDownloadUrl(summary, feedDefinition))
+                              .field(S3RiverUtil.DOC_FIELD_METADATA,   s3.getS3UserMetadata(summary.getKey()))
                               .startObject("file")
                                  .field("_name", summary.getKey().substring(summary.getKey().lastIndexOf('/') + 1))
                                  .field("title", summary.getKey().substring(summary.getKey().lastIndexOf('/') + 1))
