@@ -22,6 +22,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
+import java.util.HashMap;
 
 import com.amazonaws.services.s3.model.AmazonS3Exception;
 import org.apache.tika.metadata.Metadata;
@@ -480,8 +481,16 @@ public class S3River extends AbstractRiverComponent implements River{
 
                if (fileContent != null) {
                   // Parse content using Tika directly.
+                  Metadata fileMetadata = new Metadata();
                   String parsedContent = TikaHolder.tika().parseToString(
-                        new BytesStreamInput(fileContent, false), new Metadata());
+                        new BytesStreamInput(fileContent, false), fileMetadata);
+
+                  // convert fileMetadata to a map for jsonBuilder object
+                  Map<String, Object> fileMetadataMap = new HashMap<String, Object>();
+                  String[] metadata_keys = fileMetadata.names();
+                  for (String k : metadata_keys) {
+                     fileMetadataMap.put(k,fileMetadata.get(k));
+                  }
 
                   esIndex(indexName, typeName, fileId,
                         jsonBuilder()
@@ -493,6 +502,7 @@ public class S3River extends AbstractRiverComponent implements River{
                               .startObject("file")
                                  .field("_name", summary.getKey().substring(summary.getKey().lastIndexOf('/') + 1))
                                  .field("title", summary.getKey().substring(summary.getKey().lastIndexOf('/') + 1))
+                                 .field("metadata", fileMetadataMap)
                                  .field("file", parsedContent)
                               .endObject()
                            .endObject());
