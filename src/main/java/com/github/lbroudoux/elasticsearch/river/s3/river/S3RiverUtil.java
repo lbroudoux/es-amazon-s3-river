@@ -58,6 +58,7 @@ public class S3RiverUtil{
                      .field("term_vector", "with_positions_offsets")
                      .field("store", "yes")
                   .endObject()
+                  .startObject("metadata").field("type", "object").field("store", "yes").endObject()
                .endObject()
             .endObject()
             .endObject().endObject().endObject();

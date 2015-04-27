@@ -18,10 +18,7 @@
  */
 package com.github.lbroudoux.elasticsearch.river.s3.river;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 import com.amazonaws.services.s3.model.AmazonS3Exception;
 import org.apache.tika.metadata.Metadata;
@@ -506,22 +503,31 @@ public class S3River extends AbstractRiverComponent implements River{
 
                if (fileContent != null) {
                   // Parse content using Tika directly.
+                  Metadata fileMetadata = new Metadata();
                   String parsedContent = TikaHolder.tika().parseToString(
-                        new BytesStreamInput(fileContent, false), new Metadata());
+                        new BytesStreamInput(fileContent, false), fileMetadata);
+
+                  // Store Tika metadatas into a map.
+                  Map<String, Object> fileMetadataMap = new HashMap<String, Object>();
+                  for (String key : fileMetadata.names()) {
+                     fileMetadataMap.put(key, fileMetadata.get(key));
+                  }
 
                   esIndex(indexName, typeName, fileId,
                         jsonBuilder()
-                           .startObject()
-                              .field(S3RiverUtil.DOC_FIELD_TITLE, summary.getKey().substring(summary.getKey().lastIndexOf('/') + 1))
-                              .field(S3RiverUtil.DOC_FIELD_MODIFIED_DATE, summary.getLastModified().getTime())
-                              .field(S3RiverUtil.DOC_FIELD_SOURCE_URL, s3.getDownloadUrl(summary, feedDefinition))
-                              .field(S3RiverUtil.DOC_FIELD_METADATA,   s3.getS3UserMetadata(summary.getKey()))
-                              .startObject("file")
-                                 .field("_name", summary.getKey().substring(summary.getKey().lastIndexOf('/') + 1))
-                                 .field("title", summary.getKey().substring(summary.getKey().lastIndexOf('/') + 1))
-                                 .field("file", parsedContent)
+                              .startObject()
+                                 .field(S3RiverUtil.DOC_FIELD_TITLE, summary.getKey().substring(summary.getKey().lastIndexOf('/') + 1))
+                                 .field(S3RiverUtil.DOC_FIELD_MODIFIED_DATE, summary.getLastModified().getTime())
+                                 .field(S3RiverUtil.DOC_FIELD_SOURCE_URL, s3.getDownloadUrl(summary, feedDefinition))
+                                 .field(S3RiverUtil.DOC_FIELD_METADATA, s3.getS3UserMetadata(summary.getKey()))
+                                 .startObject("file")
+                                    .field("_name", summary.getKey().substring(summary.getKey().lastIndexOf('/') + 1))
+                                    .field("title", summary.getKey().substring(summary.getKey().lastIndexOf('/') + 1))
+                                    .field("file", parsedContent)
+                                    .field("metadata", fileMetadataMap)
+                                 .endObject()
                               .endObject()
-                           .endObject());
+                  );
                   return fileId;
                }
             }
