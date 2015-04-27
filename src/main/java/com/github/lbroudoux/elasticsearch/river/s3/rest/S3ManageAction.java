@@ -48,7 +48,7 @@ public class S3ManageAction extends BaseRestHandler{
    
    @Inject
    public S3ManageAction(Settings settings, Client client, RestController controller){
-      super(settings, client);
+      super(settings, controller, client);
 
       // Define S3 REST endpoints.
       controller.registerHandler(Method.GET, "/_s3/{rivername}/{command}", this);
