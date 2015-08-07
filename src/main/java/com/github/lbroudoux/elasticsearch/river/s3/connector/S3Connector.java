@@ -26,6 +26,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
+import com.amazonaws.auth.InstanceProfileCredentialsProvider;
 import com.amazonaws.services.s3.model.*;
 import org.elasticsearch.common.logging.ESLogger;
 import org.elasticsearch.common.logging.Loggers;
@@ -45,10 +46,26 @@ public class S3Connector{
    
    private final String accessKey;
    private final String secretKey;
+   private boolean useIAMRoleForEC2 = false;
    private String bucketName;
    private String pathPrefix;
    private AmazonS3Client s3Client;
-   
+
+   /**
+    * Create a S3Connector with security credentials. This is helpful if you want
+    * to use IAM Roles as described here http://docs.aws.amazon.com/AWSSdkDocsJava/latest/DeveloperGuide/java-dg-roles.html.
+    */
+   public S3Connector(boolean useIAMRoleForEC2) {
+      this.accessKey = null;
+      this.secretKey = null;
+      this.useIAMRoleForEC2 = useIAMRoleForEC2;
+   }
+
+   /**
+    * Create a SEConnector with provided security credentials.
+    * @param accessKey The AWS access key such as provided by AWS console
+    * @param secretKey The AWS secret key such as provided by AWS console
+    */
    public S3Connector(String accessKey, String secretKey){
       this.accessKey = accessKey;
       this.secretKey = secretKey;
@@ -63,8 +80,18 @@ public class S3Connector{
    public void connectUserBucket(String bucketName, String pathPrefix) throws AmazonS3Exception{
       this.bucketName = bucketName;
       this.pathPrefix = pathPrefix;
-      AWSCredentials credentials = new BasicAWSCredentials(accessKey, secretKey);
-      s3Client = new AmazonS3Client(credentials);
+      if (accessKey != null && secretKey != null) {
+         AWSCredentials credentials = new BasicAWSCredentials(accessKey, secretKey);
+         s3Client = new AmazonS3Client(credentials);
+      } else if (useIAMRoleForEC2) {
+         // Force usage of IAM Role process as described into
+         // http://docs.aws.amazon.com/AWSSdkDocsJava/latest/DeveloperGuide/java-dg-roles.html.
+         s3Client = new AmazonS3Client(new InstanceProfileCredentialsProvider());
+      } else {
+         // Default credentials retrieval or IAM Role process as described into
+         // http://docs.aws.amazon.com/AWSSdkDocsJava/latest/DeveloperGuide/java-dg-roles.html.
+         s3Client = new AmazonS3Client();
+      }
       // Getting location seems odd as we don't use it later and doesBucketExists() seems
       // more appropriate... However, this later returns true even for non existing buckets !
       s3Client.getBucketLocation(bucketName);

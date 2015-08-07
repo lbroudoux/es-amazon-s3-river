@@ -108,9 +108,11 @@ public class S3River extends AbstractRiverComponent implements River{
          // Retrieve connection settings.
          String accessKey = XContentMapValues.nodeStringValue(feed.get("accessKey"), null);
          String secretKey = XContentMapValues.nodeStringValue(feed.get("secretKey"), null);
+         boolean useIAMRoleForEC2 = XContentMapValues.nodeBooleanValue(feed.get("use_IAM_EC2"), false);
          
          feedDefinition = new S3RiverFeedDefinition(feedname, bucket, pathPrefix, downloadHost,
-               updateRate, Arrays.asList(includes), Arrays.asList(excludes), accessKey, secretKey, jsonSupport, indexedCharsRatio);
+               updateRate, Arrays.asList(includes), Arrays.asList(excludes), accessKey, secretKey, useIAMRoleForEC2,
+               jsonSupport, indexedCharsRatio);
       } else {
          logger.error("You didn't define the amazon-s3 settings. Exiting... See https://github.com/lbroudoux/es-amazon-s3-river");
          indexName = null;
@@ -135,24 +137,21 @@ public class S3River extends AbstractRiverComponent implements River{
       }
       
       // We need to connect to Amazon S3 after ensure mandatory settings are here.
-      if (feedDefinition.getAccessKey() == null){
-         logger.error("Amazon S3 accessKey should not be null. Please fix this.");
-         throw new IllegalArgumentException("Amazon S3 accessKey should not be null.");
-      }
-      if (feedDefinition.getSecretKey() == null){
-         logger.error("Amazon S3 secretKey should not be null. Please fix this.");
-         throw new IllegalArgumentException("Amazon S3 secretKey should not be null.");
-      }
       if (feedDefinition.getBucket() == null){
          logger.error("Amazon S3 bucket should not be null. Please fix this.");
          throw new IllegalArgumentException("Amazon S3 bucket should not be null.");
       }
-      s3 = new S3Connector(feedDefinition.getAccessKey(), feedDefinition.getSecretKey());
+      // Connect using the appropriate authentication process.
+      if (feedDefinition.getAccessKey() == null && feedDefinition.getSecretKey() == null) {
+         s3 = new S3Connector(feedDefinition.isUseIAMRoleForEC2());
+      } else {
+         s3 = new S3Connector(feedDefinition.getAccessKey(), feedDefinition.getSecretKey());
+      }
       try {
          s3.connectUserBucket(feedDefinition.getBucket(), feedDefinition.getPathPrefix());
       } catch (AmazonS3Exception ase){
          logger.error("Exception while connecting Amazon S3 user bucket. "
-               + "Either access key, secret key or bucket name are incorrect");
+               + "Either access key, secret key, IAM Role or bucket name are incorrect");
          throw ase;
       }
 

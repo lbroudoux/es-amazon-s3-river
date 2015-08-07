@@ -34,11 +34,13 @@ public class S3RiverFeedDefinition{
    private List<String> excludes;
    private String accessKey;
    private String secretKey;
+   private boolean useIAMRoleForEC2;
    private boolean jsonSupport;
    private double indexedCharsRatio = 0;
    
    public S3RiverFeedDefinition(String feedname, String bucket, String pathPrefix, String downloadHost, int updateRate, 
-         List<String> includes, List<String> excludes, String accessKey, String secretKey, boolean jsonSupport, double indexedCharsRatio) {
+         List<String> includes, List<String> excludes, String accessKey, String secretKey, boolean useIAMRoleForEC2,
+         boolean jsonSupport, double indexedCharsRatio) {
       this.feedname = feedname;
       this.bucket = bucket;
       this.pathPrefix = pathPrefix;
@@ -48,6 +50,7 @@ public class S3RiverFeedDefinition{
       this.excludes = excludes;
       this.accessKey = accessKey;
       this.secretKey = secretKey;
+      this.useIAMRoleForEC2 = useIAMRoleForEC2;
       this.jsonSupport = jsonSupport;
       this.indexedCharsRatio = indexedCharsRatio;
    }
@@ -113,6 +116,10 @@ public class S3RiverFeedDefinition{
    }
    public void setSecretKey(String secretKey) {
       this.secretKey = secretKey;
+   }
+
+   public boolean isUseIAMRoleForEC2() {
+      return useIAMRoleForEC2;
    }
 
    public boolean isJsonSupport(){ return jsonSupport; }
