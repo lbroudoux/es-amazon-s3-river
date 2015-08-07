@@ -23,13 +23,31 @@ Versions
    </thead>
    <tbody>
       <tr>
-         <td>es-1.2 branch (1.2.1-SNAPSHOT)</td>
-         <td>1.3.2</td>
+         <td>master (1.4.1-SNAPSHOT)</td>
+         <td>1.4.x</td>
+         <td>No more used</td>
+         <td>1.6</td>
+      </tr>
+      <tr>
+         <td>1.4.0</td>
+         <td>1.4.x</td>
+         <td>No more used</td>
+         <td>1.6</td>
+      </tr>
+      <tr>
+         <td>1.3.0</td>
+         <td>1.3.x</td>
          <td>No more used</td>
          <td>1.4</td>
       </tr>
       <tr>
-         <td>master (0.0.4-SNAPSHOT)</td>
+         <td>1.2.0</td>
+         <td>1.2.x</td>
+         <td>No more used</td>
+         <td>1.4</td>
+      </tr>
+      <tr>
+         <td>0.0.4</td>
          <td>1.0.x and 1.1.x</td>
          <td>No more used</td>
          <td>1.4</td>
@@ -70,15 +88,15 @@ Installation
 Just install as a regular Elasticsearch plugin by typing :
 
 ```sh
-$ bin/plugin -install com.github.lbroudoux.elasticsearch/amazon-s3-river/0.0.3
+$ bin/plugin --install com.github.lbroudoux.elasticsearch/amazon-s3-river/1.4.0
 ```
 
 This will do the job...
 
 ```
--> Installing com.github.lbroudoux.elasticsearch/amazon-s3-river/0.0.3...
-Trying http://download.elasticsearch.org/com.github.lbroudoux.elasticsearch/amazon-s3-river/amazon-s3-river-0.0.3.zip...
-Trying http://search.maven.org/remotecontent?filepath=com/github/lbroudoux/elasticsearch/amazon-s3-river/0.0.3/amazon-s3-river-0.0.3.zip...
+-> Installing com.github.lbroudoux.elasticsearch/amazon-s3-river/1.4.0...
+Trying http://download.elasticsearch.org/com.github.lbroudoux.elasticsearch/amazon-s3-river/amazon-s3-river-1.4.0.zip...
+Trying http://search.maven.org/remotecontent?filepath=com/github/lbroudoux/elasticsearch/amazon-s3-river/1.4.0/amazon-s3-river-1.4.0.zip...
 Downloading ......DONE
 Installed amazon-s3-river
 ```
@@ -105,7 +123,7 @@ We create the river with the following properties :
 
 * accessKey : AAAAAAAAAAAAAAAA
 * secretKey: BBBBBBBBBBBBBBBB
-* Amazon S3 bucket to index : `myownbucket` 
+* Amazon S3 bucket to index : `myownbucket`
 * Path prefix to index in this buckets : `Work/` (This is optional. If specified, it should be an existing path with the trailing /)
 * Update Rate : every 15 minutes (15 * 60 * 1000 = 900000 ms)
 * Get only docs like `*.doc` and `*.pdf`
@@ -138,7 +156,7 @@ By default, the plugin uses what is called the *resourceUrl* of a S3 bucket docu
 been made public within S3, it can be accessed directly from your browser. If it's not the case, the stored url
 is intended to be used by a regular S3 client that has the allowed set of credentials to access the document.
 
-Another option to easily distribute S3 content is to setup a Web proxy in front of S3 such as CloudFront (see 
+Another option to easily distribute S3 content is to setup a Web proxy in front of S3 such as CloudFront (see
 [Service Private Content With CloudFront](http://docs.aws.amazon.com/AmazonCloudFront/latest/DeveloperGuide/PrivateContent.html)).
 In that later case, you'll want to rewrite `source_url` by substituting the S3 part by your own host name. This
 plugin allows you to do that by specifying a `download_host` as a river properties.
@@ -182,7 +200,7 @@ Indexing Json documents
 *From 0.0.4 version*
 
 If you want to index Json files directly without parsing them through Tika, you can set the `json_support` configuration
-option to `true` like 
+option to `true` like
 
 ```sh
 $ curl -XPUT 'http://localhost:9200/_river/mys3docs/_meta' -d '{
@@ -290,7 +308,7 @@ When the river detect a new type, it creates automatically a mapping for this ty
     }
   }
 }
-``` 
+```
 
 *From 0.0.2 version*
 
@@ -336,7 +354,7 @@ License
 ```
 This software is licensed under the Apache 2 license, quoted below.
 
-Copyright 2013 Laurent Broudoux
+Copyright 2013-2015 Laurent Broudoux
 
 Licensed under the Apache License, Version 2.0 (the "License"); you may not
 use this file except in compliance with the License. You may obtain a copy of

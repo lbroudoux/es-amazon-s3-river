@@ -2,15 +2,15 @@
   <modelVersion>4.0.0</modelVersion>
   <groupId>com.github.lbroudoux.elasticsearch</groupId>
   <artifactId>amazon-s3-river</artifactId>
-  <version>0.0.4-SNAPSHOT</version>
+  <version>1.4.1-SNAPSHOT</version>
   <packaging>jar</packaging>
-  
+
   <parent>
     <groupId>org.sonatype.oss</groupId>
     <artifactId>oss-parent</artifactId>
     <version>7</version>
   </parent>
-  
+
   <licenses>
     <license>
       <name>The Apache Software License, Version 2.0</name>
@@ -37,11 +37,11 @@
     <system>GitHub</system>
     <url>https://github.com/lbroudoux/es-amazon-s3-river/issues/</url>
   </issueManagement>
-  
+
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-    <elasticsearch.version>1.0.0</elasticsearch.version>
-    <tika.version>1.4</tika.version>
+    <elasticsearch.version>1.4.2</elasticsearch.version>
+    <tika.version>1.6</tika.version>
   </properties>
   
   <dependencies>
@@ -69,6 +69,12 @@
       <groupId>junit</groupId>
       <artifactId>junit</artifactId>
       <version>4.1</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.slf4j</groupId>
+      <artifactId>slf4j-log4j12</artifactId>
+      <version>1.5.6</version>
       <scope>test</scope>
     </dependency>
   </dependencies>

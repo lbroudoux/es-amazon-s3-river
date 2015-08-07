@@ -28,57 +28,57 @@ import org.junit.Test;
  * Test case for S3RiverUtil class.
  * @author laurent
  */
-public class S3RiverUtilTest{
+public class S3RiverUtilTest {
 
-    @Test
-    public void shouldSayIsIndexable(){
-        List<String> includes = Arrays.asList("*.pdf");
-        List<String> excludes = Arrays.asList("*.mkv");
-        assertTrue(S3RiverUtil.isIndexable("mydoc.pdf", includes, excludes));
-    }
+   @Test
+   public void shouldSayIsIndexable() {
+      List<String> includes = Arrays.asList("*.pdf");
+      List<String> excludes = Arrays.asList("*.mkv");
+      assertTrue(S3RiverUtil.isIndexable("mydoc.pdf", includes, excludes));
+   }
 
-    @Test
-    public void shouldNotSayIsIndexable(){
-        List<String> includes = Arrays.asList("*.pdf");
-        List<String> excludes = Arrays.asList("*.mkv");
-        assertFalse(S3RiverUtil.isIndexable("mymovie.mkv", includes, excludes));
-    }
+   @Test
+   public void shouldNotSayIsIndexable() {
+      List<String> includes = Arrays.asList("*.pdf");
+      List<String> excludes = Arrays.asList("*.mkv");
+      assertFalse(S3RiverUtil.isIndexable("mymovie.mkv", includes, excludes));
+   }
 
-    @Test
-    public void shouldSayIsIndexableWhenNoSpec(){
-        // mydoc not in inclusions.
-        assertTrue(S3RiverUtil.isIndexable("mydoc.pdf", null, null));
-    }
+   @Test
+   public void shouldSayIsIndexableWhenNoSpec() {
+      // mydoc not in inclusions.
+      assertTrue(S3RiverUtil.isIndexable("mydoc.pdf", null, null));
+   }
 
-    @Test
-    public void shouldSayIsIndexableWhenInclusionsOnly(){
-        List<String> includes = Arrays.asList("*.pdf");
-        List<String> excludes = Arrays.asList();
-        // mydoc in inclusions.
-        assertTrue(S3RiverUtil.isIndexable("mydoc.pdf", includes, excludes));
-    }
+   @Test
+   public void shouldSayIsIndexableWhenInclusionsOnly() {
+      List<String> includes = Arrays.asList("*.pdf");
+      List<String> excludes = Arrays.asList();
+      // mydoc in inclusions.
+      assertTrue(S3RiverUtil.isIndexable("mydoc.pdf", includes, excludes));
+   }
 
-    @Test
-    public void shouldNotSayIsIndexableWhenInclusionsOnly(){
-        List<String> includes = Arrays.asList("*.pdf");
-        List<String> excludes = Arrays.asList();
-        // mymovie not in inclusions.
-        assertFalse(S3RiverUtil.isIndexable("mymovie.mkv", includes, excludes));
-    }
+   @Test
+   public void shouldNotSayIsIndexableWhenInclusionsOnly() {
+      List<String> includes = Arrays.asList("*.pdf");
+      List<String> excludes = Arrays.asList();
+      // mymovie not in inclusions.
+      assertFalse(S3RiverUtil.isIndexable("mymovie.mkv", includes, excludes));
+   }
 
-    @Test
-    public void shouldSayIsIndexableWhenExclusionsOnly(){
-        List<String> includes = Arrays.asList();
-        List<String> excludes = Arrays.asList("*.mkv");
-        // mydoc not in exclusions.
-        assertTrue(S3RiverUtil.isIndexable("mydoc.pdf", includes, excludes));
-    }
+   @Test
+   public void shouldSayIsIndexableWhenExclusionsOnly() {
+      List<String> includes = Arrays.asList();
+      List<String> excludes = Arrays.asList("*.mkv");
+      // mydoc not in exclusions.
+      assertTrue(S3RiverUtil.isIndexable("mydoc.pdf", includes, excludes));
+   }
 
-    @Test
-    public void shoudNotSayIsIndexableWhenExclusionsOnly(){
-        List<String> includes = Arrays.asList();
-        List<String> excludes = Arrays.asList("*.mkv");
-        // mymovie in exclusions.
-        assertFalse(S3RiverUtil.isIndexable("mymovie.mkv", includes, excludes));
-    }
+   @Test
+   public void shoudNotSayIsIndexableWhenExclusionsOnly() {
+      List<String> includes = Arrays.asList();
+      List<String> excludes = Arrays.asList("*.mkv");
+      // mymovie in exclusions.
+      assertFalse(S3RiverUtil.isIndexable("mymovie.mkv", includes, excludes));
+   }
 }

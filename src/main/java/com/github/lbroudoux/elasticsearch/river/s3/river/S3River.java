@@ -18,10 +18,7 @@
  */
 package com.github.lbroudoux.elasticsearch.river.s3.river;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 import com.amazonaws.services.s3.model.AmazonS3Exception;
 import org.apache.tika.metadata.Metadata;
@@ -52,6 +49,7 @@ import com.amazonaws.services.s3.model.S3ObjectSummary;
 import com.github.lbroudoux.elasticsearch.river.s3.connector.S3ObjectSummaries;
 import com.github.lbroudoux.elasticsearch.river.s3.connector.S3Connector;
 import com.github.lbroudoux.elasticsearch.river.s3.river.TikaHolder;
+import org.elasticsearch.threadpool.ThreadPool;
 
 import static org.elasticsearch.common.xcontent.XContentFactory.jsonBuilder;
 /**
@@ -61,13 +59,17 @@ import static org.elasticsearch.common.xcontent.XContentFactory.jsonBuilder;
 public class S3River extends AbstractRiverComponent implements River{
 
    private final Client client;
+
+   private final ThreadPool threadPool;
    
    private final String indexName;
 
    private final String typeName;
 
    private final int bulkSize;
-   
+
+   private RiverStatus riverStatus;
+
    private volatile Thread feedThread;
 
    private volatile BulkProcessor bulkProcessor;
@@ -81,9 +83,11 @@ public class S3River extends AbstractRiverComponent implements River{
    
    @Inject
    @SuppressWarnings({ "unchecked" })
-   protected S3River(RiverName riverName, RiverSettings settings, Client client) throws Exception{
+   protected S3River(RiverName riverName, RiverSettings settings, Client client, ThreadPool threadPool) throws Exception{
       super(riverName, settings);
       this.client = client;
+      this.threadPool = threadPool;
+      this.riverStatus = RiverStatus.UNKNOWN;
       
       // Deal with connector settings.
       if (settings.settings().containsKey("amazon-s3")){
@@ -151,6 +155,8 @@ public class S3River extends AbstractRiverComponent implements River{
                + "Either access key, secret key or bucket name are incorrect");
          throw ase;
       }
+
+      this.riverStatus = RiverStatus.INITIALIZED;
    }
    
    @Override
@@ -158,65 +164,83 @@ public class S3River extends AbstractRiverComponent implements River{
       if (logger.isInfoEnabled()){
          logger.info("Starting amazon s3 river scanning");
       }
-      try{
-         client.admin().indices().prepareCreate(indexName).execute().actionGet();
-      } catch (Exception e) {
-         if (ExceptionsHelper.unwrapCause(e) instanceof IndexAlreadyExistsException){
-            // that's fine.
-         } else if (ExceptionsHelper.unwrapCause(e) instanceof ClusterBlockException){
-            // ok, not recovered yet..., lets start indexing and hope we recover by the first bulk.
-         } else {
-            logger.warn("failed to create index [{}], disabling river...", e, indexName);
-            return;
-         }
-      }
-      
-      try {
-         // If needed, we create the new mapping for files
-         if(!feedDefinition.isJsonSupport()) {
-            pushMapping(indexName, typeName, S3RiverUtil.buildS3FileMapping(typeName));
-         }
-      } catch (Exception e) {
-         logger.warn("Failed to create mapping for [{}/{}], disabling river...",
-               e, indexName, typeName);
-         return;
-      }
 
-      // Creating bulk processor
-      this.bulkProcessor = BulkProcessor.builder(client, new BulkProcessor.Listener() {
+      this.riverStatus = RiverStatus.STARTING;
+      // Let's start this in another thread so we won't stop the start process
+      threadPool.generic().execute(new Runnable() {
          @Override
-         public void beforeBulk(long id, BulkRequest request) {
-            logger.debug("Going to execute new bulk composed of {} actions", request.numberOfActions());
-         }
+         public void run() {
+            // We are first waiting for a yellow state at least
+            logger.debug("Waiting for yellow status");
+            client.admin().cluster().prepareHealth("_river").setWaitForYellowStatus().get();
+            logger.debug("Yellow or green status received");
 
-         @Override
-         public void afterBulk(long id, BulkRequest request, BulkResponse response) {
-            logger.debug("Executed bulk composed of {} actions", request.numberOfActions());
-            if (response.hasFailures()) {
-               logger.warn("There was failures while executing bulk", response.buildFailureMessage());
-               if (logger.isDebugEnabled()) {
-                  for (BulkItemResponse item : response.getItems()) {
-                     if (item.isFailed()) {
-                        logger.debug("Error for {}/{}/{} for {} operation: {}", item.getIndex(),
-                              item.getType(), item.getId(), item.getOpType(), item.getFailureMessage());
+            try {
+               // Create the index if it doesn't exist
+               if (!client.admin().indices().prepareExists(indexName).execute().actionGet().isExists()) {
+                  client.admin().indices().prepareCreate(indexName).execute().actionGet();
+               }
+            } catch (Exception e) {
+               if (ExceptionsHelper.unwrapCause(e) instanceof IndexAlreadyExistsException){
+                  // that's fine.
+               } else if (ExceptionsHelper.unwrapCause(e) instanceof ClusterBlockException){
+                  // ok, not recovered yet..., lets start indexing and hope we recover by the first bulk.
+               } else {
+                  logger.warn("failed to create index [{}], disabling river...", e, indexName);
+                  return;
+               }
+            }
+
+            try {
+               // If needed, we create the new mapping for files
+               if (!feedDefinition.isJsonSupport()) {
+                  pushMapping(indexName, typeName, S3RiverUtil.buildS3FileMapping(typeName));
+               }
+            } catch (Exception e) {
+               logger.warn("Failed to create mapping for [{}/{}], disabling river...",
+                     e, indexName, typeName);
+               return;
+            }
+
+            // Creating bulk processor
+            bulkProcessor = BulkProcessor.builder(client, new BulkProcessor.Listener() {
+               @Override
+               public void beforeBulk(long id, BulkRequest request) {
+                  logger.debug("Going to execute new bulk composed of {} actions", request.numberOfActions());
+               }
+
+               @Override
+               public void afterBulk(long id, BulkRequest request, BulkResponse response) {
+                  logger.debug("Executed bulk composed of {} actions", request.numberOfActions());
+                  if (response.hasFailures()) {
+                     logger.warn("There was failures while executing bulk", response.buildFailureMessage());
+                     if (logger.isDebugEnabled()) {
+                        for (BulkItemResponse item : response.getItems()) {
+                           if (item.isFailed()) {
+                              logger.debug("Error for {}/{}/{} for {} operation: {}", item.getIndex(),
+                                    item.getType(), item.getId(), item.getOpType(), item.getFailureMessage());
+                           }
+                        }
                      }
                   }
                }
-            }
-         }
 
-         @Override
-         public void afterBulk(long id, BulkRequest request, Throwable throwable) {
-            logger.warn("Error executing bulk", throwable);
-         }
-      })
-            .setBulkActions(bulkSize)
-            .build();
+               @Override
+               public void afterBulk(long id, BulkRequest request, Throwable throwable) {
+                  logger.warn("Error executing bulk", throwable);
+               }
+            })
+                  .setBulkActions(bulkSize)
+                  .build();
 
-      // We create as many Threads as there are feeds.
-      feedThread = EsExecutors.daemonThreadFactory(settings.globalSettings(), "fs_slurper")
-            .newThread(new S3Scanner(feedDefinition));
-      feedThread.start();
+            // We create as many Threads as there are feeds.
+            feedThread = EsExecutors.daemonThreadFactory(settings.globalSettings(), "fs_slurper")
+                  .newThread(new S3Scanner(feedDefinition));
+            feedThread.start();
+            riverStatus = RiverStatus.RUNNING;
+         }
+      });   
+      
    }
    
    @Override
@@ -225,11 +249,13 @@ public class S3River extends AbstractRiverComponent implements River{
          logger.info("Closing amazon s3 river");
       }
       closed = true;
+      riverStatus = RiverStatus.STOPPING;
       
       // We have to close the Thread.
       if (feedThread != null){
          feedThread.interrupt();
       }
+      riverStatus = RiverStatus.STOPPED;
    }
    
    /**
@@ -259,7 +285,7 @@ public class S3River extends AbstractRiverComponent implements River{
       if (logger.isTraceEnabled()){
          logger.trace("pushMapping(" + index + ", " + type + ")");
       }
-      
+
       // If type does not exist, we create it
       boolean mappingExist = isMappingExist(index, type);
       if (!mappingExist) {
@@ -318,7 +344,7 @@ public class S3River extends AbstractRiverComponent implements River{
             if (closed){
                return;
             }
-            
+
             try{
                if (isStarted()){
                   // Scan folder starting from last changes id, then record the new one.
@@ -485,21 +511,31 @@ public class S3River extends AbstractRiverComponent implements River{
                   }
 
                   // Parse content using Tika directly.
+                  Metadata fileMetadata = new Metadata();
                   String parsedContent = TikaHolder.tika().parseToString(
-                        new BytesStreamInput(fileContent, false), new Metadata(), indexedChars);
+                        new BytesStreamInput(fileContent, false), fileMetadata, indexedChars);
+
+                  // Store Tika metadatas into a map.
+                  Map<String, Object> fileMetadataMap = new HashMap<String, Object>();
+                  for (String key : fileMetadata.names()) {
+                     fileMetadataMap.put(key, fileMetadata.get(key));
+                  }
 
                   esIndex(indexName, typeName, fileId,
                         jsonBuilder()
-                           .startObject()
-                              .field(S3RiverUtil.DOC_FIELD_TITLE, summary.getKey().substring(summary.getKey().lastIndexOf('/') + 1))
-                              .field(S3RiverUtil.DOC_FIELD_MODIFIED_DATE, summary.getLastModified().getTime())
-                              .field(S3RiverUtil.DOC_FIELD_SOURCE_URL, s3.getDownloadUrl(summary, feedDefinition))
-                              .startObject("file")
-                                 .field("_name", summary.getKey().substring(summary.getKey().lastIndexOf('/') + 1))
-                                 .field("title", summary.getKey().substring(summary.getKey().lastIndexOf('/') + 1))
-                                 .field("file", parsedContent)
+                              .startObject()
+                                 .field(S3RiverUtil.DOC_FIELD_TITLE, summary.getKey().substring(summary.getKey().lastIndexOf('/') + 1))
+                                 .field(S3RiverUtil.DOC_FIELD_MODIFIED_DATE, summary.getLastModified().getTime())
+                                 .field(S3RiverUtil.DOC_FIELD_SOURCE_URL, s3.getDownloadUrl(summary, feedDefinition))
+                                 .field(S3RiverUtil.DOC_FIELD_METADATA, s3.getS3UserMetadata(summary.getKey()))
+                                 .startObject("file")
+                                    .field("_name", summary.getKey().substring(summary.getKey().lastIndexOf('/') + 1))
+                                    .field("title", summary.getKey().substring(summary.getKey().lastIndexOf('/') + 1))
+                                    .field("file", parsedContent)
+                                    .field("metadata", fileMetadataMap)
+                                 .endObject()
                               .endObject()
-                           .endObject());
+                  );
                   return fileId;
                }
             }
@@ -542,16 +578,16 @@ public class S3River extends AbstractRiverComponent implements River{
          bulkProcessor.add(client.prepareIndex(index, type, id).setSource(xb).request());
       }
 
-       /** Add to bulk an IndexRequest. */
-       private void esIndex(String index, String type, String id, byte[] json) throws Exception{
-           if (logger.isDebugEnabled()){
-               logger.debug("Indexing in ES " + index + ", " + type + ", " + id);
-           }
-           if (logger.isTraceEnabled()){
-               logger.trace("Json indexed : {}", json);
-           }
-           bulkProcessor.add(client.prepareIndex(index, type, id).setSource(json).request());
-       }
+      /** Add to bulk an IndexRequest. */
+      private void esIndex(String index, String type, String id, byte[] json) throws Exception{
+         if (logger.isDebugEnabled()){
+            logger.debug("Indexing in ES " + index + ", " + type + ", " + id);
+         }
+         if (logger.isTraceEnabled()){
+            logger.trace("Json indexed : {}", json);
+         }
+         bulkProcessor.add(client.prepareIndex(index, type, id).setSource(json).request());
+      }
 
       /** Add to bulk a DeleteRequest. */
       private void esDelete(String index, String type, String id) throws Exception{
@@ -560,5 +596,14 @@ public class S3River extends AbstractRiverComponent implements River{
          }
          bulkProcessor.add(client.prepareDelete(index, type, id).request());
       }
+   }
+
+   private enum RiverStatus {
+      UNKNOWN,
+      INITIALIZED,
+      STARTING,
+      RUNNING,
+      STOPPING,
+      STOPPED;
    }
 }

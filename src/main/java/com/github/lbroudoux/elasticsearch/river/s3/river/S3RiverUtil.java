@@ -20,8 +20,7 @@ package com.github.lbroudoux.elasticsearch.river.s3.river;
 
 import static org.elasticsearch.common.xcontent.XContentFactory.jsonBuilder;
 
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 import org.elasticsearch.common.Strings;
 import org.elasticsearch.common.xcontent.XContentBuilder;
@@ -37,6 +36,7 @@ public class S3RiverUtil{
    public static final String DOC_FIELD_TITLE = "title";
    public static final String DOC_FIELD_MODIFIED_DATE = "modifiedDate";
    public static final String DOC_FIELD_SOURCE_URL = "source_url";
+   public static final String DOC_FIELD_METADATA = "metadata";
    
    /**
     * Build mapping description for Amazon S3 files.
@@ -50,6 +50,7 @@ public class S3RiverUtil{
             .startObject(DOC_FIELD_TITLE).field("type", "string").field("analyzer","keyword").endObject()
             .startObject(DOC_FIELD_MODIFIED_DATE).field("type", "date").endObject()
             .startObject(DOC_FIELD_SOURCE_URL).field("type", "string").endObject()
+            .startObject(DOC_FIELD_METADATA).field("type", "object").endObject()
             .startObject("file")
                .startObject("properties")
                   .startObject("title").field("type", "string").field("store", "yes").endObject()
@@ -57,6 +58,7 @@ public class S3RiverUtil{
                      .field("term_vector", "with_positions_offsets")
                      .field("store", "yes")
                   .endObject()
+                  .startObject("metadata").field("type", "object").field("store", "yes").endObject()
                .endObject()
             .endObject()
             .endObject().endObject().endObject();
@@ -79,14 +81,14 @@ public class S3RiverUtil{
          int i = 0;
          includes = new String[includesarray.size()];
          for (String include : includesarray) {
-            includes[i++] = Strings.trimAllWhitespace(include);
+            includes[i++] = trimAllWhitespace(include);
          }
       } else {
          String includedef = (String) XContentMapValues.extractValue(path, settings);
-         includes = Strings.commaDelimitedListToStringArray(Strings.trimAllWhitespace(includedef));
+         includes = Strings.commaDelimitedListToStringArray(trimAllWhitespace(includedef));
       }
       
-      String[] uniquelist = Strings.removeDuplicateStrings(includes);
+      String[] uniquelist = removeDuplicateStrings(includes);
       
       return uniquelist;
    }
@@ -127,5 +129,41 @@ public class S3RiverUtil{
       }
       
       return false;
+   }
+
+   /**
+    * Trim <i>all</i> whitespace from the given String: leading, trailing, and inbetween characters.
+    * @param str the String to check
+    * @return the trimmed String
+    * @see java.lang.Character#isWhitespace
+    */
+   public static String trimAllWhitespace(String str) {
+      if (!Strings.hasLength(str)) {
+         return str;
+      }
+      StringBuilder sb = new StringBuilder(str);
+      int index = 0;
+      while (sb.length() > index) {
+         if (Character.isWhitespace(sb.charAt(index))) {
+            sb.deleteCharAt(index);
+         } else {
+            index++;
+         }
+      }
+      return sb.toString();
+   }
+
+   /**
+    * Remove duplicate Strings from the given array. Also sorts the array, as it uses a TreeSet.
+    * @param array the String array
+    * @return an array without duplicates, in natural sort order
+    */
+   public static String[] removeDuplicateStrings(String[] array) {
+      if (array == null || array.length == 0) {
+         return array;
+      }
+      Set<String> set = new TreeSet<String>();
+      set.addAll(Arrays.asList(array));
+      return Strings.toStringArray(set);
    }
 }
