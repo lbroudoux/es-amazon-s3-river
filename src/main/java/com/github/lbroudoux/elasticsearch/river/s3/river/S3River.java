@@ -96,6 +96,7 @@ public class S3River extends AbstractRiverComponent implements River{
          String downloadHost = XContentMapValues.nodeStringValue(feed.get("download_host"), null);
          int updateRate = XContentMapValues.nodeIntegerValue(feed.get("update_rate"), 15 * 60 * 1000);
          boolean jsonSupport = XContentMapValues.nodeBooleanValue(feed.get("json_support"), false);
+         double indexedCharsRatio  = XContentMapValues.nodeDoubleValue(feed.get("indexed_chars_ratio"), 0.0);
          
          String[] includes = S3RiverUtil.buildArrayFromSettings(settings.settings(), "amazon-s3.includes");
          String[] excludes = S3RiverUtil.buildArrayFromSettings(settings.settings(), "amazon-s3.excludes");
@@ -105,7 +106,7 @@ public class S3River extends AbstractRiverComponent implements River{
          String secretKey = XContentMapValues.nodeStringValue(feed.get("secretKey"), null);
          
          feedDefinition = new S3RiverFeedDefinition(feedname, bucket, pathPrefix, downloadHost,
-               updateRate, Arrays.asList(includes), Arrays.asList(excludes), accessKey, secretKey, jsonSupport);
+               updateRate, Arrays.asList(includes), Arrays.asList(excludes), accessKey, secretKey, jsonSupport, indexedCharsRatio);
       } else {
          logger.error("You didn't define the amazon-s3 settings. Exiting... See https://github.com/lbroudoux/es-amazon-s3-river");
          indexName = null;
@@ -476,10 +477,16 @@ public class S3River extends AbstractRiverComponent implements River{
                byte[] fileContent = s3.getContent(summary);
 
                if (fileContent != null) {
+                  // Compute number of chars to index.
+                  // see https://github.com/lbroudoux/es-amazon-s3-river/issues/36
+                  int indexedChars = 100000;
+                  if (feedDefinition.getIndexedCharsRatio() > 0) {
+                     indexedChars = (int) Math.round(fileContent.length * feedDefinition.getIndexedCharsRatio());
+                  }
 
                   // Parse content using Tika directly.
                   String parsedContent = TikaHolder.tika().parseToString(
-                        new BytesStreamInput(fileContent, false), new Metadata());
+                        new BytesStreamInput(fileContent, false), new Metadata(), indexedChars);
 
                   esIndex(indexName, typeName, fileId,
                         jsonBuilder()

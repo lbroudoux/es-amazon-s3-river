@@ -35,9 +35,10 @@ public class S3RiverFeedDefinition{
    private String accessKey;
    private String secretKey;
    private boolean jsonSupport;
+   private double indexedCharsRatio = 0;
    
    public S3RiverFeedDefinition(String feedname, String bucket, String pathPrefix, String downloadHost, int updateRate, 
-         List<String> includes, List<String> excludes, String accessKey, String secretKey, boolean jsonSupport){
+         List<String> includes, List<String> excludes, String accessKey, String secretKey, boolean jsonSupport, double indexedCharsRatio) {
       this.feedname = feedname;
       this.bucket = bucket;
       this.pathPrefix = pathPrefix;
@@ -48,6 +49,7 @@ public class S3RiverFeedDefinition{
       this.accessKey = accessKey;
       this.secretKey = secretKey;
       this.jsonSupport = jsonSupport;
+      this.indexedCharsRatio = indexedCharsRatio;
    }
    
    public String getFeedname() {
@@ -114,4 +116,11 @@ public class S3RiverFeedDefinition{
    }
 
    public boolean isJsonSupport(){ return jsonSupport; }
+
+   public double getIndexedCharsRatio() {
+      return indexedCharsRatio;
+   }
+   public void setIndexedCharsRatio(double indexedCharsRatio) {
+      this.indexedCharsRatio = indexedCharsRatio;
+   }
 }
