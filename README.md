@@ -293,7 +293,7 @@ The behaviour of this river plugin is now the following :
 
 * `accessKey` and `secretKey` are no longer mandatory fields. If not provided at index creation, river will just try to
 connect to your S3 bucket using the default provider chain,
-* new option `use_IAM_EC2` can be set to `true` to force the usage of EC2 IAM Role.
+* new option `use_EC2_IAM` can be set to `true` to force the usage of EC2 IAM Role.
  
 In action, this lead to something like when creating river :
 
@@ -304,7 +304,7 @@ $ curl -XPUT 'http://localhost:9200/_river/mys3docs/_meta' -d '{
     "name": "My Amazon S3 feed",
     "bucket" : "myownbucket"
     "pathPrefix": "Work/",
-    "use_IAM_EC2": true
+    "use_EC2_IAM": true
   }
 }'
 ```

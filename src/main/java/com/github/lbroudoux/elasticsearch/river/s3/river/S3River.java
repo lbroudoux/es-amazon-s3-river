@@ -108,7 +108,7 @@ public class S3River extends AbstractRiverComponent implements River{
          // Retrieve connection settings.
          String accessKey = XContentMapValues.nodeStringValue(feed.get("accessKey"), null);
          String secretKey = XContentMapValues.nodeStringValue(feed.get("secretKey"), null);
-         boolean useIAMRoleForEC2 = XContentMapValues.nodeBooleanValue(feed.get("use_IAM_EC2"), false);
+         boolean useIAMRoleForEC2 = XContentMapValues.nodeBooleanValue(feed.get("use_EC2_IAM"), false);
          
          feedDefinition = new S3RiverFeedDefinition(feedname, bucket, pathPrefix, downloadHost,
                updateRate, Arrays.asList(includes), Arrays.asList(excludes), accessKey, secretKey, useIAMRoleForEC2,
