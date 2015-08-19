@@ -23,7 +23,13 @@ Versions
    </thead>
    <tbody>
       <tr>
-         <td>master (1.4.1-SNAPSHOT)</td>
+         <td>master (1.4.2-SNAPSHOT)</td>
+         <td>1.4.x</td>
+         <td>No more used</td>
+         <td>1.6</td>
+      </tr>
+      <tr>
+         <td>1.4.1</td>
          <td>1.4.x</td>
          <td>No more used</td>
          <td>1.6</td>
@@ -88,15 +94,15 @@ Installation
 Just install as a regular Elasticsearch plugin by typing :
 
 ```sh
-$ bin/plugin --install com.github.lbroudoux.elasticsearch/amazon-s3-river/1.4.0
+$ bin/plugin --install com.github.lbroudoux.elasticsearch/amazon-s3-river/1.4.1
 ```
 
 This will do the job...
 
 ```
--> Installing com.github.lbroudoux.elasticsearch/amazon-s3-river/1.4.0...
-Trying http://download.elasticsearch.org/com.github.lbroudoux.elasticsearch/amazon-s3-river/amazon-s3-river-1.4.0.zip...
-Trying http://search.maven.org/remotecontent?filepath=com/github/lbroudoux/elasticsearch/amazon-s3-river/1.4.0/amazon-s3-river-1.4.0.zip...
+-> Installing com.github.lbroudoux.elasticsearch/amazon-s3-river/1.4.1...
+Trying http://download.elasticsearch.org/com.github.lbroudoux.elasticsearch/amazon-s3-river/amazon-s3-river-1.4.1.zip...
+Trying http://search.maven.org/remotecontent?filepath=com/github/lbroudoux/elasticsearch/amazon-s3-river/1.4.1/amazon-s3-river-1.4.1.zip...
 Downloading ......DONE
 Installed amazon-s3-river
 ```
