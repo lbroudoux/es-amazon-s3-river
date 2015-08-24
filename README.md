@@ -24,19 +24,19 @@ Versions
    <tbody>
       <tr>
          <td>master (1.4.2-SNAPSHOT)</td>
-         <td>1.4.x</td>
+         <td>1.4.x and 1.5.x</td>
          <td>No more used</td>
          <td>1.6</td>
       </tr>
       <tr>
          <td>1.4.1</td>
-         <td>1.4.x</td>
+         <td>1.4.x and 1.5.x</td>
          <td>No more used</td>
          <td>1.6</td>
       </tr>
       <tr>
          <td>1.4.0</td>
-         <td>1.4.x</td>
+         <td>1.4.x and 1.5.x</td>
          <td>No more used</td>
          <td>1.6</td>
       </tr>
