@@ -23,8 +23,8 @@ Versions
    </thead>
    <tbody>
       <tr>
-         <td>master (1.4.2-SNAPSHOT)</td>
-         <td>1.4.x and 1.5.x</td>
+         <td>master (1.6.0-SNAPSHOT)</td>
+         <td>1.6.x</td>
          <td>No more used</td>
          <td>1.6</td>
       </tr>

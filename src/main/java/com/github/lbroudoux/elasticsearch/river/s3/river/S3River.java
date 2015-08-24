@@ -512,7 +512,7 @@ public class S3River extends AbstractRiverComponent implements River{
                   // Parse content using Tika directly.
                   Metadata fileMetadata = new Metadata();
                   String parsedContent = TikaHolder.tika().parseToString(
-                        new BytesStreamInput(fileContent, false), fileMetadata, indexedChars);
+                        new BytesStreamInput(fileContent), fileMetadata, indexedChars);
 
                   // Store Tika metadatas into a map.
                   Map<String, Object> fileMetadataMap = new HashMap<String, Object>();
